@@ -37,4 +37,4 @@ export function getVueComponentMeta(element: Element): {
   return null
 }
 
-export { setupErrorHandler } from './error-handler.js'
+export { setupErrorHandler, createErrorBoundary } from './error-handler.js'

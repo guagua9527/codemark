@@ -14,13 +14,19 @@ importers:
 
   examples/vue-app:
     dependencies:
+      '@codemark/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@codemark/vue':
+        specifier: workspace:*
+        version: link:../../packages/vue
       vue:
         specifier: ^3.5.0
         version: 3.5.35(typescript@5.9.3)
     devDependencies:
-      '@codemark/frontend':
+      '@codemark/vite-plugin':
         specifier: workspace:*
-        version: link:../../packages/frontend
+        version: link:../../packages/vite-plugin
       '@vitejs/plugin-vue':
         specifier: ^5.2.0
         version: 5.2.4(vite@5.4.21(@types/node@25.9.1))(vue@3.5.35(typescript@5.9.3))
@@ -33,6 +39,28 @@ importers:
       vue-tsc:
         specifier: ^2.1.0
         version: 2.2.12(typescript@5.9.3)
+
+  packages/express:
+    dependencies:
+      '@codemark/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      ws:
+        specifier: ^8.18.0
+        version: 8.21.0
+    devDependencies:
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/ws':
+        specifier: ^8.5.13
+        version: 8.18.1
+      express:
+        specifier: ^4.21.0
+        version: 4.22.2
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
 
   packages/frontend:
     devDependencies:
@@ -101,6 +129,10 @@ importers:
         version: 5.4.21(@types/node@25.9.1)
 
   packages/vue:
+    dependencies:
+      '@codemark/protocol':
+        specifier: workspace:*
+        version: link:../protocol
     devDependencies:
       typescript:
         specifier: ^5.5.0
@@ -1673,7 +1705,7 @@ snapshots:
 
   '@types/node-fetch@2.6.13':
     dependencies:
-      '@types/node': 18.19.130
+      '@types/node': 25.9.1
       form-data: 4.0.5
 
   '@types/node@18.19.130':

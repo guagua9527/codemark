@@ -1,0 +1,30 @@
+{
+  "name": "@codemark/express",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "peerDependencies": {
+    "express": "^4.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "@codemark/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/express": "^4.17.21",
+    "@types/ws": "^8.5.13",
+    "express": "^4.21.0"
+  }
+}

@@ -57,10 +57,6 @@ export class AgentServerClient {
         console.log(`[CodeMark Express] Registered as ${adapterId}`)
         break
       }
-      case 'backend:source-request': {
-        this.handlers.forEach(h => h('backend:source-request', msg.payload))
-        break
-      }
     }
 
     this.handlers.forEach(h => h(msg.event, msg.payload))

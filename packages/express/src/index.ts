@@ -31,8 +31,9 @@ export function codemark(options: CodeMarkExpressOptions = {}): CodeMarkExpress 
         const fullPath = path.resolve(projectRoot, filePath)
         const content = await fs.readFile(fullPath, 'utf-8')
         client.send('backend:source-response', { requestId, content })
-      } catch (e: any) {
-        client.send('backend:source-response', { requestId, content: '', error: e.message })
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e)
+        client.send('backend:source-response', { requestId, content: '', error: message })
       }
     }
   })

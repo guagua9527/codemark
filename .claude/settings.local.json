@@ -12,7 +12,11 @@
       "Bash(pnpm approve-builds *)",
       "Bash(pnpm *)",
       "Bash(timeout 5 npx tsx src/index.ts)",
-      "Bash(timeout 5 npx vite)"
+      "Bash(timeout 5 npx vite)",
+      "Bash(curl -s http://localhost:3001/api/annotations)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(pkill -f \"tsx watch\")",
+      "Bash(pkill -f \"vite\")"
     ]
   }
 }

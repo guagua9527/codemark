@@ -151,19 +151,59 @@ interface BackendAdapter {
 
 **实现包：**
 - `@codemark/express` — Express 中间件（路由扫描 + 请求拦截 + 错误捕获）
-- `codemark-spring-boot-starter` — Spring Boot Starter（Java，自动配置，WebSocket 与 Agent Server 通信）
+- `codemark-spring-boot-starter` — Spring Boot Starter（Java，自动配置）
 
-### 非 Node.js 后端适配器通信
+### 后端适配器通信机制
 
-Node.js 适配器（Express）作为 npm 包直接集成到 Agent Server 进程中。非 Node.js 适配器（如 Spring Boot）作为独立进程运行，通过 WebSocket 与 Agent Server 通信：
+所有后端适配器（无论语言）均作为**独立进程**运行，通过 **WebSocket 长连接**与 Agent Server 通信。适配器是用户应用的一部分（中间件/ Starter），Agent Server 是独立进程。
 
 ```
-┌──────────────────┐     WebSocket     ┌──────────────────┐
-│  Spring Boot App │ ◄──────────────► │  Agent Server    │
-│  codemark-spring │                   │  @codemark/server│
-│  -boot-starter   │                   │  (Node.js)       │
-└──────────────────┘                   └──────────────────┘
+┌──────────────────┐                    ┌──────────────────┐
+│  用户 Express App│                    │  Agent Server    │
+│  ┌────────────┐  │   WebSocket        │  @codemark/server│
+│  │ @codemark/ │  │ ◄───────────────► │                  │
+│  │ express    │  │                    │  WSServer        │
+│  │ middleware │  │                    │  AdapterRegistry │
+│  └────────────┘  │                    │                  │
+└──────────────────┘                    └──────────────────┘
+
+┌──────────────────┐                    ┌──────────────────┐
+│  用户 Spring Boot│                    │  Agent Server    │
+│  App             │   WebSocket        │  @codemark/server│
+│  ┌────────────┐  │ ◄───────────────► │                  │
+│  │codemark-   │  │                    │  WSServer        │
+│  │spring-boot │  │                    │  AdapterRegistry │
+│  │-starter    │  │                    │                  │
+│  └────────────┘  │                    └──────────────────┘
+└──────────────────┘
 ```
+
+**WebSocket 事件协议（适配器 → Agent Server）：**
+
+| 事件 | 方向 | 说明 |
+|------|------|------|
+| `adapter:register` | Adapter→Server | 适配器注册，声明类型（backend）和语言 |
+| `backend:routes` | Adapter→Server | 推送路由映射表（启动时扫描结果） |
+| `backend:error` | Adapter→Server | 运行时错误事件（含堆栈、请求上下文） |
+| `backend:log` | Adapter→Server | 请求日志流（可选） |
+| `adapter:heartbeat` | Adapter→Server | 心跳保活 |
+
+**WebSocket 事件协议（Agent Server → 适配器）：**
+
+| 事件 | 方向 | 说明 |
+|------|------|------|
+| `adapter:registered` | Server→Adapter | 注册确认，返回 adapterId |
+| `backend:restart` | Server→Adapter | 请求重启应用（AI 修复后触发） |
+| `backend:get-source` | Server→Adapter | 请求读取指定文件源码内容 |
+| `backend:source-response` | Adapter→Server | 返回源码内容 |
+
+**连接生命周期：**
+1. 用户应用启动 → 适配器初始化 → WebSocket 连接 Agent Server
+2. 发送 `adapter:register` → Server 注册并返回 adapterId
+3. 适配器执行路由扫描 → 发送 `backend:routes`
+4. 运行时捕获错误/日志 → 实时推送 `backend:error` / `backend:log`
+5. 心跳保活，断线自动重连
+6. Server 发送 `backend:get-source` → 适配器读取本地文件并返回
 
 ### Spring Boot Starter 实现
 
@@ -214,10 +254,10 @@ codemark-spring-boot-starter/
 
 ### 后端源码定位策略
 
-两种方式结合：
+两种方式结合，由各语言适配器实现，通过 WebSocket 推送给 Agent Server：
 
-1. **启动时路由扫描** — 插件在 app 启动时拦截路由注册，通过 `Error.stack` 获取 handler 的 `文件路径:行号`，构建路由映射表
-2. **运行时错误堆栈解析** — 当请求处理出错时，解析 `Error.stack` 获取错误发生的精确 `文件:行号`，关联到请求上下文
+1. **启动时路由扫描** — 适配器在应用启动时扫描路由注册，获取 handler 的 `文件路径:行号`，构建路由映射表，通过 `backend:routes` 事件推送
+2. **运行时错误堆栈解析** — 当请求处理出错时，适配器解析错误堆栈获取精确 `文件:行号`，关联请求上下文，通过 `backend:error` 事件推送
 
 ### FileSystem 抽象层
 
@@ -291,9 +331,11 @@ interface RouteInfo {
 
 | 类别 | 事件 | 方向 |
 |------|------|------|
+| 适配器 | adapter:register / adapter:registered / adapter:heartbeat | 双向 |
 | 批注 | annotation:create / update / delete / resolve | 双向 |
 | 任务 | task:start / progress / proposal / apply / result / rollback | Server→Client |
-| 后端 | backend:routes / backend:error / backend:log | Adapter→Server |
+| 后端 | backend:routes / backend:error / backend:log / backend:restart | 双向 |
+| 源码 | backend:get-source / backend:source-response | 双向 |
 | 跨栈 | trace:link / trace:error | 双向 |
 
 ### REST API

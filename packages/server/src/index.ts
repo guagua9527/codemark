@@ -1,11 +1,19 @@
 import http from 'http'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { Store } from './store.js'
 import { createWSServer } from './ws.js'
 import { createAPI } from './api.js'
 import { AIFixer } from './ai.js'
 
 const PORT = parseInt(process.env.CODEMARK_PORT || '3001')
-const PROJECT_ROOT = process.env.PROJECT_ROOT || process.cwd()
+
+// Resolve PROJECT_ROOT: relative paths are resolved against the monorepo root
+// (two levels up from packages/server/src/)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const monorepoRoot = path.resolve(__dirname, '../../..')
+const rawRoot = process.env.PROJECT_ROOT || process.cwd()
+const PROJECT_ROOT = path.isAbsolute(rawRoot) ? rawRoot : path.resolve(monorepoRoot, rawRoot)
 
 const store = new Store()
 const aiFixer = new AIFixer(PROJECT_ROOT)

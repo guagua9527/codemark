@@ -104,15 +104,19 @@ export function generateSelector(element: Element): string {
 }
 
 export function getComponentMeta(element: Element): ComponentMeta {
-  // Vue 3 __file metadata
-  const vnode = (element as any).__vnode_context || (element as any).__vue_app__
-  if (vnode?.type?.__file) {
-    return {
-      filePath: vnode.type.__file,
-      line: 0,
-      column: 0,
-      componentName: vnode.type.name || vnode.type.__name || 'Unknown'
+  // Vue 3 __file metadata — walk up the DOM to find the nearest Vue component
+  let el: Element | null = element
+  while (el) {
+    const vueComp = (el as any).__vueParentComponent
+    if (vueComp?.type?.__file) {
+      return {
+        filePath: vueComp.type.__file,
+        line: 0,
+        column: 0,
+        componentName: vueComp.type.name || vueComp.type.__name || 'Unknown'
+      }
     }
+    el = el.parentElement
   }
 
   // React __source metadata

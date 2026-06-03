@@ -39,6 +39,9 @@ export class AIFixer {
     const filePath = path.resolve(this.projectRoot, annotation.sourceFile)
     const fileContent = await fs.readFile(filePath, 'utf-8')
 
+    // Backup original file before AI fix
+    await fs.writeFile(filePath + '.bak', fileContent, 'utf-8')
+
     const userPrompt = `批注内容：${annotation.content}
 关联文件：${annotation.sourceFile}
 关联行号：${annotation.sourceLine}
@@ -62,7 +65,10 @@ ${fileContent}
     })
 
     const content = response.choices[0]?.message?.content || ''
-    return this.parseResponse(content)
+    console.log('[CodeMark] AI response:\n', content)
+    const result = this.parseResponse(content)
+    console.log('[CodeMark] Parsed diff:\n', result.diff)
+    return result
   }
 
   private parseResponse(content: string): { diff: string; summary: string } {
@@ -86,38 +92,126 @@ ${fileContent}
   }
 }
 
+interface Hunk {
+  lines: string[]      // raw diff lines (with prefix: ' ', '-', '+')
+  removed: string[]    // lines to remove (without '-' prefix)
+  added: string[]      // lines to add (without '+' prefix)
+  context: string[]    // context lines (without ' ' prefix)
+}
+
+function parseHunks(diff: string): Hunk[] {
+  const hunks: Hunk[] = []
+  let current: Hunk | null = null
+
+  for (const line of diff.split('\n')) {
+    // Skip headers
+    if (line.startsWith('diff ') || line.startsWith('index ') ||
+        line.startsWith('---') || line.startsWith('+++') ||
+        line.startsWith('new file') || line.startsWith('deleted file')) {
+      continue
+    }
+
+    if (line.startsWith('@@')) {
+      if (current) hunks.push(current)
+      current = { lines: [], removed: [], added: [], context: [] }
+      continue
+    }
+
+    if (!current) continue
+
+    if (line.startsWith('-')) {
+      current.lines.push(line)
+      current.removed.push(line.substring(1))
+    } else if (line.startsWith('+')) {
+      current.lines.push(line)
+      current.added.push(line.substring(1))
+    } else if (line.startsWith(' ') || line.startsWith('\t')) {
+      current.lines.push(line)
+      current.context.push(line.startsWith('\t') ? line : line.substring(1))
+    } else if (line === '\\ No newline at end of file') {
+      // ignore
+    }
+  }
+  if (current) hunks.push(current)
+  return hunks
+}
+
+function findHunkPosition(hunk: Hunk, originalLines: string[], hintStart: number): number {
+  // Try the hint position first (from hunk header)
+  if (hintStart >= 0 && hintStart < originalLines.length) {
+    if (matchesAt(hunk, originalLines, hintStart)) return hintStart
+  }
+
+  // Fuzzy search: find where the hunk's removed + context lines match
+  const searchLines = [...hunk.removed, ...hunk.context]
+  if (searchLines.length === 0) return Math.max(0, Math.min(hintStart, originalLines.length - 1))
+
+  for (let i = 0; i < originalLines.length; i++) {
+    if (matchesAt(hunk, originalLines, i)) return i
+  }
+
+  // Last resort: just use the hint
+  return Math.max(0, Math.min(hintStart, originalLines.length - 1))
+}
+
+function matchesAt(hunk: Hunk, originalLines: string[], startIdx: number): boolean {
+  let idx = startIdx
+  for (const line of hunk.lines) {
+    if (line.startsWith('+')) continue // added lines don't need to match
+    if (idx >= originalLines.length) return false
+    const origLine = originalLines[idx]
+    const expected = line.startsWith('-') || line.startsWith(' ') || line.startsWith('\t')
+      ? (line.startsWith('\t') ? line : line.substring(1))
+      : line
+    if (origLine !== expected) return false
+    idx++
+  }
+  return true
+}
+
 function applyUnifiedDiff(original: string, diff: string): string {
   const originalLines = original.split('\n')
-  const diffLines = diff.split('\n')
+  const hunks = parseHunks(diff)
+
+  if (hunks.length === 0) return original
 
   const result: string[] = []
-  let originalIndex = 0
+  let origIdx = 0
 
-  for (const line of diffLines) {
-    if (line.startsWith('@@')) {
-      const match = line.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/)
-      if (match) {
-        const start = parseInt(match[1]) - 1
-        while (originalIndex < start && originalIndex < originalLines.length) {
-          result.push(originalLines[originalIndex])
-          originalIndex++
+  for (const hunk of hunks) {
+    // Find the correct position for this hunk using context matching
+    const hintMatch = diff.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/)
+    const hintStart = hintMatch ? parseInt(hintMatch[1]) - 1 : origIdx
+    const hunkStart = findHunkPosition(hunk, originalLines, hintStart)
+
+    // Copy original lines up to hunk start
+    while (origIdx < hunkStart && origIdx < originalLines.length) {
+      result.push(originalLines[origIdx])
+      origIdx++
+    }
+
+    // Apply hunk line by line
+    for (const line of hunk.lines) {
+      if (line.startsWith('-')) {
+        // Skip removed line from original
+        origIdx++
+      } else if (line.startsWith('+')) {
+        // Add new line
+        result.push(line.substring(1))
+      } else {
+        // Context line — copy from original and advance
+        if (origIdx < originalLines.length) {
+          result.push(originalLines[origIdx])
+          origIdx++
         }
       }
-    } else if (line.startsWith('-')) {
-      originalIndex++
-    } else if (line.startsWith('+')) {
-      result.push(line.substring(1))
-    } else if (line.startsWith(' ')) {
-      result.push(originalLines[originalIndex])
-      originalIndex++
-    } else if (line === '\\ No newline at end of file') {
-      // Ignore
     }
   }
 
-  while (originalIndex < originalLines.length) {
-    result.push(originalLines[originalIndex])
-    originalIndex++
+  // Copy remaining original lines after last hunk
+  while (origIdx < originalLines.length) {
+    result.push(originalLines[origIdx])
+    origIdx++
   }
 
   return result.join('\n')

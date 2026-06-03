@@ -40,6 +40,12 @@ importers:
         specifier: ^5.5.0
         version: 5.9.3
 
+  packages/protocol:
+    devDependencies:
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
   packages/server:
     dependencies:
       express:

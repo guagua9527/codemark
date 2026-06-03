@@ -16,6 +16,9 @@ export function createVueAdapter(options: VueAdapterOptions = {}) {
 /**
  * Get Vue component metadata from a DOM element.
  * Walks up the DOM to find the nearest Vue component instance.
+ *
+ * Note: `line` is always 0 because Vue does not expose source line info at runtime.
+ * The return type is kept as-is to conform to the protocol spec.
  */
 export function getVueComponentMeta(element: Element): {
   filePath: string

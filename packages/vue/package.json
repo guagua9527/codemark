@@ -14,6 +14,9 @@
     "build": "tsc",
     "dev": "tsc --watch"
   },
+  "dependencies": {
+    "@codemark/protocol": "workspace:*"
+  },
   "peerDependencies": {
     "vue": "^3.0.0"
   },

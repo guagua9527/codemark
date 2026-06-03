@@ -475,3 +475,17 @@ AI 同时读取前端调用代码 + 后端 handler 代码
 | P2 | `@codemark/react` | React 适配器 |
 | P2 | `@codemark/webpack-plugin` | Webpack 插件 |
 | P2 | `codemark-spring-boot-starter` | Spring Boot Starter（Java，Maven 包） |
+
+---
+
+## 已知限制与扩展路径
+
+### 微服务支持（当前不支持，设计预留）
+
+当前架构面向**单体应用**（一个前端 + 一个后端）。微服务场景的扩展路径：
+
+1. **核心类型增加 `serviceId`** — `Annotation`、`RouteInfo`、`ErrorEvent` 增加服务来源标识，Agent Server 按服务维度管理数据
+2. **AdapterRegistry 支持多实例** — 同一类型适配器可注册多个实例（如 3 个 Spring Boot 服务各跑一个 Starter），每个实例有独立 serviceId
+3. **跨服务批注关联** — 通过 `X-Request-ID` 在服务间传递，Agent Server 可串联同一请求在多个服务中的调用链
+
+改动范围：仅扩展类型字段 + Agent Server 的 Store 查询逻辑，不涉及通信协议变更。

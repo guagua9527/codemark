@@ -28,7 +28,7 @@ CodeMark 是一个**可视化的 AI 代码修改入口**。用户在 Web 页面�
 │  Layer 2: 适配器层 — 独立 npm 包                      │
 │  前端：@codemark/vue @codemark/react                 │
 │  构建：@codemark/vite-plugin @codemark/webpack-plugin │
-│  后端：@codemark/express @codemark/spring-boot         │
+│  后端：@codemark/express codemark-spring-boot-starter   │
 ├─────────────────────────────────────────────────────┤
 │  Layer 3: 协议层 — @codemark/protocol                │
 │  共享类型 + 适配器接口契约 + WebSocket/REST 协议        │
@@ -50,7 +50,7 @@ packages/
 ├── vite-plugin/         — @codemark/vite-plugin
 ├── webpack-plugin/      — @codemark/webpack-plugin
 ├── express/             — @codemark/express（Node.js 后端适配器）
-├── spring-boot/         — @codemark/spring-boot（Java Spring Boot 适配器，独立进程通信）
+├── spring-boot-starter/ — io.codemark:codemark-spring-boot-starter（Java，Maven 包）
 └── examples/
     ├── vue-app/
     ├── react-app/
@@ -151,35 +151,66 @@ interface BackendAdapter {
 
 **实现包：**
 - `@codemark/express` — Express 中间件（路由扫描 + 请求拦截 + 错误捕获）
-- `@codemark/spring-boot` — Spring Boot 适配器（Java，通过 REST/WebSocket 与 Agent Server 通信）
+- `codemark-spring-boot-starter` — Spring Boot Starter（Java，自动配置，WebSocket 与 Agent Server 通信）
 
 ### 非 Node.js 后端适配器通信
 
-Node.js 适配器（Express）作为 npm 包直接集成到 Agent Server 进程中。非 Node.js 适配器（如 Spring Boot）作为独立进程运行，通过 REST/WebSocket 与 Agent Server 通信：
+Node.js 适配器（Express）作为 npm 包直接集成到 Agent Server 进程中。非 Node.js 适配器（如 Spring Boot）作为独立进程运行，通过 WebSocket 与 Agent Server 通信：
 
 ```
-┌──────────────────┐     REST/WebSocket     ┌──────────────────┐
-│  Spring Boot App │ ◄──────────────────► │  Agent Server    │
-│  @codemark/spring│                        │  @codemark/server│
-│  -boot (Java)    │                        │  (Node.js)       │
-└──────────────────┘                        └──────────────────┘
+┌──────────────────┐     WebSocket     ┌──────────────────┐
+│  Spring Boot App │ ◄──────────────► │  Agent Server    │
+│  codemark-spring │                   │  @codemark/server│
+│  -boot-starter   │                   │  (Node.js)       │
+└──────────────────┘                   └──────────────────┘
 ```
 
-**Java 适配器接口（对应 BackendAdapter）：**
+### Spring Boot Starter 实现
 
-```java
-public interface CodeMarkBackendAdapter {
-    List<RouteInfo> getRoutes();
-    void onLog(LogCallback callback);
-    void onError(ErrorCallback callback);
-    List<APISchema> getSchemas();
-    void restart();
-}
+**Maven 坐标：** `io.codemark:codemark-spring-boot-starter`
+
+**用户接入方式：**
+
+```xml
+<!-- pom.xml -->
+<dependency>
+    <groupId>io.codemark</groupId>
+    <artifactId>codemark-spring-boot-starter</artifactId>
+    <version>1.0.0</version>
+</dependency>
 ```
+
+```yaml
+# application.yml
+codemark:
+  server-url: ws://localhost:3001
+  enabled: true
+```
+
+**自动配置模块结构：**
+
+```
+codemark-spring-boot-starter/
+├── CodeMarkAutoConfiguration     — @Configuration 自动装配所有 Bean
+├── CodeMarkProperties            — @ConfigurationProperties("codemark") 配置绑定
+├── CodeMarkRouteScanner          — 启动时扫描所有 @RequestMapping handler
+├── CodeMarkExceptionHandler      — @ControllerAdvice 全局异常捕获
+├── CodeMarkWebSocketClient       — 连接 Agent Server 的 WebSocket 客户端
+└── CodeMarkRequestInterceptor    — 请求拦截器（注入 X-Request-ID，记录日志）
+```
+
+**核心 Bean 职责：**
+
+| Bean | 职责 |
+|------|------|
+| `CodeMarkRouteScanner` | 实现 `InitializingBean`，启动时通过 `RequestMappingHandlerMapping` 遍历所有 handler 方法，结合反射 + `Class.getProtectionDomain().getCodeSource()` 获取源文件路径和行号，通过 WebSocket 推送给 Agent Server |
+| `CodeMarkExceptionHandler` | `@ControllerAdvice` 全局异常处理器，捕获异常后解析堆栈获取 `文件:行号`，关联 `X-Request-ID`，通过 WebSocket 上报 |
+| `CodeMarkWebSocketClient` | 使用 Spring `WebSocketClient` 连接 Agent Server，维护长连接，处理断线重连。负责发送路由信息、错误事件、日志，接收 AI 修复指令 |
+| `CodeMarkRequestInterceptor` | `HandlerInterceptor`，为每个请求生成/传递 `X-Request-ID`，记录请求开始/结束时间和状态码 |
 
 **源码定位策略（Spring 特有）：**
-1. **启动时路由扫描** — 通过 `RequestMappingHandlerMapping` 获取所有 `@RequestMapping` 注解的 handler 方法，结合反射获取源文件位置
-2. **运行时错误捕获** — 通过 `@ControllerAdvice` + `@ExceptionHandler` 全局捕获异常，解析堆栈获取 `文件:行号`
+1. **启动时路由扫描** — 通过 `RequestMappingHandlerMapping` 获取所有 `@RequestMapping` 注解的 handler 方法，通过反射获取 `Method` 对象，再通过 `method.getDeclaringClass().getProtectionDomain().getCodeSource().getLocation()` 获取 class 文件路径，结合行号表（ASM 或 `java.lang.StackTraceElement`）定位源码
+2. **运行时错误捕获** — `@ControllerAdvice` + `@ExceptionHandler(Throwable.class)` 全局捕获，解析 `e.getStackTrace()` 获取精确 `文件:行号`，通过 `X-Request-ID` 关联到前端请求上下文
 
 ### 后端源码定位策略
 
@@ -361,4 +392,4 @@ AI 同时读取前端调用代码 + 后端 handler 代码
 | P1 | `@codemark/express` | Express 后端适配器 |
 | P2 | `@codemark/react` | React 适配器 |
 | P2 | `@codemark/webpack-plugin` | Webpack 插件 |
-| P2 | `@codemark/spring-boot` | Spring Boot 后端适配器（Java） |
+| P2 | `codemark-spring-boot-starter` | Spring Boot Starter（Java，Maven 包） |

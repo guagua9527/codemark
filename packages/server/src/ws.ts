@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws'
 import { Server } from 'http'
-import { WSMessage } from './types.js'
+import type { WSMessage } from '@codemark/protocol'
 import { Store } from './store.js'
 
 type BroadcastFn = (event: string, payload: unknown) => void
@@ -13,7 +13,7 @@ export function createWSServer(server: Server, store: Store): BroadcastFn {
 
     ws.on('message', (data) => {
       try {
-        const msg: WSMessage = JSON.parse(data.toString())
+        const msg = JSON.parse(data.toString()) as WSMessage
         handleMessage(ws, msg, store, broadcast)
       } catch (e) {
         console.error('[CodeMark] Invalid message', e)
@@ -26,7 +26,7 @@ export function createWSServer(server: Server, store: Store): BroadcastFn {
   })
 
   function broadcast(event: string, payload: unknown) {
-    const msg: WSMessage = { event, payload, timestamp: Date.now() }
+    const msg = { event, payload, timestamp: Date.now() } as WSMessage
     const data = JSON.stringify(msg)
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
@@ -39,11 +39,18 @@ export function createWSServer(server: Server, store: Store): BroadcastFn {
 }
 
 function handleMessage(ws: WebSocket, msg: WSMessage, store: Store, broadcast: BroadcastFn) {
-  switch (msg.event) {
+  const event = msg.event as string
+  switch (event) {
     case 'annotation:create': {
       const { annotation: data } = msg.payload as { annotation: any }
       const annotation = store.createAnnotation(data)
       broadcast('annotation:create', { annotation })
+      break
+    }
+    case 'annotation:update': {
+      const { id, content, intent } = msg.payload as { id: string; content?: string; intent?: string }
+      store.updateAnnotation(id, { content, intent } as any)
+      broadcast('annotation:update', msg.payload)
       break
     }
     case 'annotation:delete': {

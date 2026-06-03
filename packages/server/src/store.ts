@@ -1,9 +1,9 @@
-import { Annotation, FixResult } from './types.js'
 import { randomUUID } from 'crypto'
+import type { Annotation, Task, TaskState } from '@codemark/protocol'
 
 export class Store {
   private annotations = new Map<string, Annotation>()
-  private fixes = new Map<string, FixResult>()
+  private tasks = new Map<string, Task>()
 
   createAnnotation(data: Omit<Annotation, 'id' | 'createdAt' | 'status'>): Annotation {
     const annotation: Annotation = {
@@ -24,28 +24,46 @@ export class Store {
     return this.annotations.get(id)
   }
 
+  updateAnnotation(id: string, data: Partial<Pick<Annotation, 'content' | 'intent' | 'status'>>): Annotation | undefined {
+    const annotation = this.annotations.get(id)
+    if (!annotation) return undefined
+    Object.assign(annotation, data)
+    return annotation
+  }
+
   deleteAnnotation(id: string): boolean {
     return this.annotations.delete(id)
   }
 
-  createFix(annotationId: string, diff: string, summary: string): FixResult {
-    const fix: FixResult = {
+  createTask(annotationId: string): Task {
+    const task: Task = {
       id: randomUUID(),
       annotationId,
-      diff,
-      summary,
-      status: 'pending',
+      state: 'pending',
+      diff: '',
+      summary: '',
+      aiModel: '',
+      createdAt: Date.now(),
     }
-    this.fixes.set(fix.id, fix)
-    return fix
+    this.tasks.set(task.id, task)
+    return task
   }
 
-  updateFixStatus(id: string, status: FixResult['status']): void {
-    const fix = this.fixes.get(id)
-    if (fix) fix.status = status
+  getTask(id: string): Task | undefined {
+    return this.tasks.get(id)
   }
 
-  getFix(id: string): FixResult | undefined {
-    return this.fixes.get(id)
+  updateTaskState(id: string, state: TaskState): void {
+    const task = this.tasks.get(id)
+    if (task) task.state = state
+  }
+
+  setTaskResult(id: string, diff: string, summary: string, aiModel: string): void {
+    const task = this.tasks.get(id)
+    if (task) {
+      task.diff = diff
+      task.summary = summary
+      task.aiModel = aiModel
+    }
   }
 }

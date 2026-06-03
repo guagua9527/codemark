@@ -1,8 +1,10 @@
 import express, { Express } from 'express'
+import fs from 'fs/promises'
+import path from 'path'
 import { Store } from './store.js'
-import { AIFixer } from './ai.js'
+import { CodeAgent } from './ai.js'
 
-export function createAPI(store: Store, aiFixer: AIFixer, broadcast: (event: string, payload: unknown) => void): Express {
+export function createAPI(store: Store, codeAgent: CodeAgent, broadcast: (event: string, payload: unknown) => void): Express {
   const app = express()
   app.use(express.json())
 
@@ -36,19 +38,33 @@ export function createAPI(store: Store, aiFixer: AIFixer, broadcast: (event: str
     const annotation = store.getAnnotation(annotationId)
     if (!annotation) return res.status(404).json({ error: 'Annotation not found' })
 
-    broadcast('fix:progress', { annotationId, message: 'AI 分析中...' })
+    const task = store.createTask(annotationId)
+    broadcast('task:start', { taskId: task.id, annotationId })
 
     try {
-      const fix = await aiFixer.fix(annotation)
-      store.createFix(annotationId, fix.diff, fix.summary)
-      broadcast('fix:progress', { annotationId, message: '应用修复...' })
+      const sourceContent = await fs.readFile(
+        path.resolve((codeAgent as any).projectRoot, annotation.sourceFile),
+        'utf-8',
+      )
 
-      await aiFixer.applyDiff(annotation.sourceFile, fix.diff)
-      broadcast('fix:result', { annotationId, status: 'applied', summary: fix.summary })
+      const result = await codeAgent.execute(
+        task.id,
+        annotation,
+        sourceContent,
+        (message) => broadcast('task:progress', { taskId: task.id, message }),
+      )
 
-      res.json({ fix: { diff: fix.diff, summary: fix.summary } })
+      store.setTaskResult(task.id, result.diff, result.summary, result.aiModel)
+      store.updateTaskState(task.id, 'applying')
+
+      await codeAgent.applyDiff(annotation.sourceFile, result.diff)
+      store.updateTaskState(task.id, 'done')
+
+      broadcast('task:result', { taskId: task.id, status: 'applied', summary: result.summary })
+      res.json({ task: { id: task.id, diff: result.diff, summary: result.summary } })
     } catch (err: any) {
-      broadcast('fix:result', { annotationId, status: 'failed', error: err.message })
+      store.updateTaskState(task.id, 'failed')
+      broadcast('task:result', { taskId: task.id, status: 'failed', error: err.message })
       res.status(500).json({ error: err.message })
     }
   })

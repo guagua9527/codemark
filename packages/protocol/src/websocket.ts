@@ -1,18 +1,39 @@
 import type { Annotation } from './annotation.js'
 import type { Task } from './task.js'
 import type { ErrorEvent, LogEntry } from './error.js'
-import type { RouteInfo, APISchema } from './route.js'
-import type { AdapterInfo } from './adapter.js'
+import type { RouteInfo } from './route.js'
+import type { AdapterType } from './adapter.js'
 
-export interface WSMessage {
-  event: string
-  payload: unknown
+export type WSMessageMap = {
+  'adapter:register': AdapterRegisterPayload
+  'adapter:registered': AdapterRegisteredPayload
+  'backend:routes': BackendRoutesPayload
+  'backend:error': BackendErrorPayload
+  'backend:log': BackendLogPayload
+  'backend:source-request': BackendSourceRequestPayload
+  'backend:source-response': BackendSourceResponsePayload
+  'annotation:create': AnnotationCreatePayload
+  'annotation:update': AnnotationUpdatePayload
+  'annotation:delete': AnnotationDeletePayload
+  'annotation:resolve': AnnotationResolvePayload
+  'task:start': TaskStartPayload
+  'task:progress': TaskProgressPayload
+  'task:proposal': TaskProposalPayload
+  'task:result': TaskResultPayload
+  'task:rollback': TaskRollbackPayload
+}
+
+export type WSEventName = keyof WSMessageMap
+
+export interface WSMessage<E extends WSEventName = WSEventName> {
+  event: E
+  payload: WSMessageMap[E]
   timestamp: number
 }
 
 // Adapter events (Adapter → Server)
 export interface AdapterRegisterPayload {
-  type: 'frontend' | 'backend'
+  type: AdapterType
   language: string
   framework: string
 }

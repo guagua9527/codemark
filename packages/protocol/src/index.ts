@@ -5,6 +5,8 @@ export type { RouteInfo, APISchema } from './route.js'
 export type { AdapterInfo, AdapterType, BackendAdapter } from './adapter.js'
 export type { ProjectConfig } from './config.js'
 export type {
+  WSMessageMap,
+  WSEventName,
   WSMessage,
   AdapterRegisterPayload,
   AdapterRegisteredPayload,

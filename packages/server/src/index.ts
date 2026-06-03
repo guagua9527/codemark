@@ -5,6 +5,8 @@ import { Store } from './store.js'
 import { createWSServer } from './ws.js'
 import { createAPI } from './api.js'
 import { CodeAgent } from './ai.js'
+import { AdapterRegistry } from './adapter-registry.js'
+import { ContextBuilder } from './context-builder.js'
 
 const PORT = parseInt(process.env.CODEMARK_PORT || '3001')
 
@@ -16,16 +18,18 @@ const rawRoot = process.env.PROJECT_ROOT || process.cwd()
 const PROJECT_ROOT = path.isAbsolute(rawRoot) ? rawRoot : path.resolve(monorepoRoot, rawRoot)
 
 const store = new Store()
-const codeAgent = new CodeAgent(PROJECT_ROOT)
+const adapterRegistry = new AdapterRegistry()
+const contextBuilder = new ContextBuilder()
+const agent = new CodeAgent(PROJECT_ROOT)
 
 // Create a broadcast placeholder, will be set after WS server starts
 let broadcast: (event: string, payload: unknown) => void = () => {}
 
-const app = createAPI(store, codeAgent, (...args) => broadcast(...args))
+const app = createAPI(store, agent, adapterRegistry, (...args) => broadcast(...args))
 const server = http.createServer(app)
 
 // Start WebSocket server and get broadcast function
-broadcast = createWSServer(server, store)
+broadcast = createWSServer(server, store, adapterRegistry)
 
 server.listen(PORT, () => {
   console.log(`[CodeMark] Server running on http://localhost:${PORT}`)

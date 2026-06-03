@@ -1,10 +1,17 @@
 import express, { Express } from 'express'
 import fs from 'fs/promises'
 import path from 'path'
+import { randomUUID } from 'crypto'
 import { Store } from './store.js'
 import { CodeAgent } from './ai.js'
+import { AdapterRegistry } from './adapter-registry.js'
 
-export function createAPI(store: Store, codeAgent: CodeAgent, broadcast: (event: string, payload: unknown) => void): Express {
+export function createAPI(
+  store: Store,
+  codeAgent: CodeAgent,
+  adapterRegistry: AdapterRegistry,
+  broadcast: (event: string, payload: unknown) => void,
+): Express {
   const app = express()
   app.use(express.json())
 
@@ -16,6 +23,8 @@ export function createAPI(store: Store, codeAgent: CodeAgent, broadcast: (event:
     if (req.method === 'OPTIONS') return res.sendStatus(200)
     next()
   })
+
+  // --- Annotation endpoints ---
 
   app.get('/api/annotations', (_req, res) => {
     res.json({ annotations: store.getAnnotations() })
@@ -33,6 +42,15 @@ export function createAPI(store: Store, codeAgent: CodeAgent, broadcast: (event:
     res.json({ success: true })
   })
 
+  // --- Routes endpoint ---
+
+  app.get('/api/routes', (_req, res) => {
+    const routes = adapterRegistry.getAllRoutes()
+    res.json({ routes, adapterCount: adapterRegistry.getAdapterCount() })
+  })
+
+  // --- Fix endpoint ---
+
   app.post('/api/fix', async (req, res) => {
     const { annotationId } = req.body
     const annotation = store.getAnnotation(annotationId)
@@ -42,10 +60,18 @@ export function createAPI(store: Store, codeAgent: CodeAgent, broadcast: (event:
     broadcast('task:start', { taskId: task.id, annotationId })
 
     try {
-      const sourceContent = await fs.readFile(
-        path.resolve((codeAgent as any).projectRoot, annotation.sourceFile),
-        'utf-8',
-      )
+      // Try to read source via backend adapter first, fallback to local filesystem
+      let sourceContent: string
+      const backendAdapter = adapterRegistry.getBackendAdapter()
+
+      if (backendAdapter) {
+        sourceContent = await readSourceViaAdapter(adapterRegistry, backendAdapter.socket, annotation.sourceFile)
+      } else {
+        sourceContent = await fs.readFile(
+          path.resolve((codeAgent as any).projectRoot, annotation.sourceFile),
+          'utf-8',
+        )
+      }
 
       const result = await codeAgent.execute(
         task.id,
@@ -70,4 +96,32 @@ export function createAPI(store: Store, codeAgent: CodeAgent, broadcast: (event:
   })
 
   return app
+}
+
+/**
+ * Read source code from a backend adapter via WebSocket.
+ * Falls back to an error if the adapter doesn't respond within 5 seconds.
+ */
+function readSourceViaAdapter(registry: AdapterRegistry, socket: import('ws').WebSocket, filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const requestId = randomUUID()
+    const timeout = setTimeout(() => {
+      reject(new Error(`Backend adapter source request timed out for: ${filePath}`))
+    }, 5000)
+
+    registry.registerSourceCallback(requestId, (content, error) => {
+      clearTimeout(timeout)
+      if (error) {
+        reject(new Error(error))
+      } else {
+        resolve(content)
+      }
+    })
+
+    socket.send(JSON.stringify({
+      event: 'backend:source-request',
+      payload: { filePath, requestId },
+      timestamp: Date.now(),
+    }))
+  })
 }

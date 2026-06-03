@@ -24,17 +24,19 @@ CodeMark 是一个**可视化的 AI 代码修改入口**。用户在 Web 页面�
 ┌─────────────────────────────────────────────────────┐
 │  Layer 1: UI 层 — @codemark/ui                       │
 │  Web Components 批注组件库（框架无关）                  │
+│  ↕ WebSocket 直连 Agent Server                       │
 ├─────────────────────────────────────────────────────┤
-│  Layer 2: 适配器层 — 独立 npm 包                      │
+│  Layer 2: 适配器层 — 独立进程                          │
 │  前端：@codemark/vue @codemark/react                 │
 │  构建：@codemark/vite-plugin @codemark/webpack-plugin │
-│  后端：@codemark/express codemark-spring-boot-starter   │
+│  后端：@codemark/express codemark-spring-boot-starter │
+│  ↕ 后端适配器通过 WebSocket 连接 Agent Server          │
 ├─────────────────────────────────────────────────────┤
 │  Layer 3: 协议层 — @codemark/protocol                │
-│  共享类型 + 适配器接口契约 + WebSocket/REST 协议        │
+│  共享类型 + 适配器接口契约 + WebSocket 协议             │
 ├─────────────────────────────────────────────────────┤
 │  Layer 4: Agent 层 — @codemark/server                │
-│  AI Agent Server（独立进程）                           │
+│  AI Agent Server（独立进程，WebSocket 服务端）          │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -85,6 +87,44 @@ Web Components 实现的批注组件库，框架无关，Shadow DOM 隔离样式
 4. 提交 → `<codemark-marker>` 标记出现在元素旁
 5. 点击标记 → `<codemark-panel>` 展示详情 + AI 修复
 6. 打开管理面板 → `<codemark-management>` 侧边栏列出所有批注
+
+### 前端通信机制
+
+前端 Web Components 运行在浏览器中，通过 **WebSocket 直连** Agent Server，不经过用户应用后端。
+
+```
+┌──────────────────┐                    ┌──────────────────┐
+│  浏览器           │                    │  Agent Server    │
+│  ┌────────────┐  │   WebSocket        │  @codemark/server│
+│  │ @codemark/ │  │ ◄───────────────► │                  │
+│  │ ui         │  │   ws://host:3001   │  WSServer        │
+│  └────────────┘  │                    │  RESTAPI         │
+│  ┌────────────┐  │                    │                  │
+│  │ @codemark/ │  │                    │                  │
+│  │ vite-plugin│  │                    │                  │
+│  └────────────┘  │                    │                  │
+└──────────────────┘                    └──────────────────┘
+```
+
+**连接建立流程：**
+1. 构建插件（Vite/Webpack）通过虚拟模块注入 CodeMark 客户端代码
+2. 客户端代码包含 Agent Server 的 WebSocket 地址（默认 `ws://localhost:3001`）
+3. 页面加载后，`@codemark/ui` 自动建立 WebSocket 连接
+4. 连接成功后，前端可以发送批注、接收任务进度
+
+**前端 WebSocket 事件：**
+
+| 事件 | 方向 | 说明 |
+|------|------|------|
+| `annotation:create` | Client→Server | 创建批注 |
+| `annotation:update` | Client→Server | 更新批注内容 |
+| `annotation:delete` | Client→Server | 删除批注 |
+| `annotation:resolve` | Client→Server | 标记批注已解决 |
+| `task:start` | Server→Client | AI 任务开始处理 |
+| `task:progress` | Server→Client | 任务进度更新 |
+| `task:proposal` | Server→Client | AI 生成的修复方案（含 Diff 预览） |
+| `task:result` | Server→Client | 任务完成（成功/失败） |
+| `trace:link` | Server→Client | 跨栈关联通知（前端批注 → 后端错误） |
 
 ---
 

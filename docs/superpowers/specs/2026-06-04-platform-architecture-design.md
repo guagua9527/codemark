@@ -53,6 +53,7 @@ packages/
 ├── koa/                 — @codemark/koa
 ├── fastify/             — @codemark/fastify
 ├── swagger/             — @codemark/swagger
+├── spring-boot/         — @codemark/spring-boot（Java Spring Boot 适配器，独立进程通信）
 └── examples/
     ├── vue-app/
     ├── react-app/
@@ -156,6 +157,35 @@ interface BackendAdapter {
 - `@codemark/koa` — Koa 中间件
 - `@codemark/fastify` — Fastify 插件
 - `@codemark/swagger` — Swagger UI 集成（在 Swagger 页面注入 CodeMark）
+- `@codemark/spring-boot` — Spring Boot 适配器（Java，通过 REST/WebSocket 与 Agent Server 通信）
+
+### 非 Node.js 后端适配器通信
+
+Node.js 适配器（Express/Koa/Fastify）作为 npm 包直接集成到 Agent Server 进程中。非 Node.js 适配器（如 Spring Boot）作为独立进程运行，通过 REST/WebSocket 与 Agent Server 通信：
+
+```
+┌──────────────────┐     REST/WebSocket     ┌──────────────────┐
+│  Spring Boot App │ ◄──────────────────► │  Agent Server    │
+│  @codemark/spring│                        │  @codemark/server│
+│  -boot (Java)    │                        │  (Node.js)       │
+└──────────────────┘                        └──────────────────┘
+```
+
+**Java 适配器接口（对应 BackendAdapter）：**
+
+```java
+public interface CodeMarkBackendAdapter {
+    List<RouteInfo> getRoutes();
+    void onLog(LogCallback callback);
+    void onError(ErrorCallback callback);
+    List<APISchema> getSchemas();
+    void restart();
+}
+```
+
+**源码定位策略（Spring 特有）：**
+1. **启动时路由扫描** — 通过 `RequestMappingHandlerMapping` 获取所有 `@RequestMapping` 注解的 handler 方法，结合反射获取源文件位置
+2. **运行时错误捕获** — 通过 `@ControllerAdvice` + `@ExceptionHandler` 全局捕获异常，解析堆栈获取 `文件:行号`
 
 ### 后端源码定位策略
 
@@ -338,4 +368,5 @@ AI 同时读取前端调用代码 + 后端 handler 代码
 | P1 | `@codemark/swagger` | Swagger UI 集成 |
 | P2 | `@codemark/react` | React 适配器 |
 | P2 | `@codemark/webpack-plugin` | Webpack 插件 |
+| P2 | `@codemark/spring-boot` | Spring Boot 后端适配器（Java） |
 | P3 | `@codemark/koa` / `@codemark/fastify` | 其他后端适配器 |

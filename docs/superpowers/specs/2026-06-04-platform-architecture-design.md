@@ -28,7 +28,7 @@ CodeMark 是一个**可视化的 AI 代码修改入口**。用户在 Web 页面�
 │  Layer 2: 适配器层 — 独立 npm 包                      │
 │  前端：@codemark/vue @codemark/react                 │
 │  构建：@codemark/vite-plugin @codemark/webpack-plugin │
-│  后端：@codemark/express @codemark/koa ...            │
+│  后端：@codemark/express @codemark/spring-boot         │
 ├─────────────────────────────────────────────────────┤
 │  Layer 3: 协议层 — @codemark/protocol                │
 │  共享类型 + 适配器接口契约 + WebSocket/REST 协议        │
@@ -49,10 +49,7 @@ packages/
 ├── react/               — @codemark/react（React 适配器）
 ├── vite-plugin/         — @codemark/vite-plugin
 ├── webpack-plugin/      — @codemark/webpack-plugin
-├── express/             — @codemark/express
-├── koa/                 — @codemark/koa
-├── fastify/             — @codemark/fastify
-├── swagger/             — @codemark/swagger
+├── express/             — @codemark/express（Node.js 后端适配器）
 ├── spring-boot/         — @codemark/spring-boot（Java Spring Boot 适配器，独立进程通信）
 └── examples/
     ├── vue-app/
@@ -154,14 +151,11 @@ interface BackendAdapter {
 
 **实现包：**
 - `@codemark/express` — Express 中间件（路由扫描 + 请求拦截 + 错误捕获）
-- `@codemark/koa` — Koa 中间件
-- `@codemark/fastify` — Fastify 插件
-- `@codemark/swagger` — Swagger UI 集成（在 Swagger 页面注入 CodeMark）
 - `@codemark/spring-boot` — Spring Boot 适配器（Java，通过 REST/WebSocket 与 Agent Server 通信）
 
 ### 非 Node.js 后端适配器通信
 
-Node.js 适配器（Express/Koa/Fastify）作为 npm 包直接集成到 Agent Server 进程中。非 Node.js 适配器（如 Spring Boot）作为独立进程运行，通过 REST/WebSocket 与 Agent Server 通信：
+Node.js 适配器（Express）作为 npm 包直接集成到 Agent Server 进程中。非 Node.js 适配器（如 Spring Boot）作为独立进程运行，通过 REST/WebSocket 与 Agent Server 通信：
 
 ```
 ┌──────────────────┐     REST/WebSocket     ┌──────────────────┐
@@ -365,8 +359,6 @@ AI 同时读取前端调用代码 + 后端 handler 代码
 | P0 | `@codemark/vite-plugin` | Vite 插件（重构现有） |
 | P0 | `@codemark/vue` | Vue 3 适配器（重构现有） |
 | P1 | `@codemark/express` | Express 后端适配器 |
-| P1 | `@codemark/swagger` | Swagger UI 集成 |
 | P2 | `@codemark/react` | React 适配器 |
 | P2 | `@codemark/webpack-plugin` | Webpack 插件 |
 | P2 | `@codemark/spring-boot` | Spring Boot 后端适配器（Java） |
-| P3 | `@codemark/koa` / `@codemark/fastify` | 其他后端适配器 |

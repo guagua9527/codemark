@@ -1,4 +1,5 @@
 import type { Plugin } from 'vite'
+import path from 'path'
 
 export interface CodeMarkPluginOptions {
   serverPort?: number
@@ -14,18 +15,30 @@ export function codemark(options: CodeMarkPluginOptions = {}): Plugin {
     config() {
       return {
         optimizeDeps: {
-          include: ['@codemark/frontend'],
+          include: ['@codemark/ui'],
+        },
+        resolve: {
+          alias: {
+            '@codemark/ui': path.resolve(process.cwd(), 'node_modules/@codemark/ui/dist/index.js'),
+          },
         },
       }
     },
 
+    resolveId(id) {
+      if (id === '/@codemark/client') {
+        return '\0/@codemark/client'
+      }
+    },
+
+    load(id) {
+      if (id === '\0/@codemark/client') {
+        return `import { initCodeMark } from '@codemark/ui'; initCodeMark({ serverPort: ${port} });`
+      }
+    },
+
     transformIndexHtml(html) {
-      return html.replace('</body>', `
-<script type="module">
-  import { initCodeMark } from '@codemark/frontend'
-  initCodeMark({ serverPort: ${port} })
-</script>
-</body>`)
+      return html.replace('</body>', `<script type="module" src="/@codemark/client"></script>\n</body>`)
     },
   }
 }

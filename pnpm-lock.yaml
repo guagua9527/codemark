@@ -88,6 +88,10 @@ importers:
         version: 5.9.3
 
   packages/vite-plugin:
+    dependencies:
+      '@codemark/ui':
+        specifier: workspace:*
+        version: link:../ui
     devDependencies:
       typescript:
         specifier: ^5.5.0

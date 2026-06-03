@@ -9,7 +9,10 @@
       "Bash(pnpm install *)",
       "Bash(npm --version)",
       "Bash(npm install *)",
-      "Bash(pnpm approve-builds *)"
+      "Bash(pnpm approve-builds *)",
+      "Bash(pnpm *)",
+      "Bash(timeout 5 npx tsx src/index.ts)",
+      "Bash(timeout 5 npx vite)"
     ]
   }
 }

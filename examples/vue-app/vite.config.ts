@@ -1,6 +1,28 @@
-import { defineConfig } from 'vite'
+import { defineConfig, Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { codemark } from '@codemark/vite-plugin'
+
+function codemark(options: { serverPort?: number } = {}): Plugin {
+  const port = options.serverPort || 3001
+  return {
+    name: 'vite-plugin-codemark',
+    apply: 'serve',
+    config() {
+      return {
+        optimizeDeps: {
+          include: ['@codemark/frontend'],
+        },
+      }
+    },
+    transformIndexHtml(html) {
+      return html.replace('</body>', `
+<script type="module">
+  import { initCodeMark } from '@codemark/frontend'
+  initCodeMark({ serverPort: ${port} })
+</script>
+</body>`)
+    },
+  }
+}
 
 export default defineConfig({
   plugins: [

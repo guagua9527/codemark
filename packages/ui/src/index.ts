@@ -46,8 +46,22 @@ export function initCodeMark(options: CodeMarkOptions = {}) {
   })
 
   wsClient.on('task:result', (payload) => {
-    const result = payload as { taskId: string; status: string; summary?: string }
-    console.log(`[CodeMark] Task ${result.taskId}: ${result.status} - ${result.summary}`)
+    const result = payload as { taskId: string; status: string; summary?: string; error?: string }
+    const msg = result.status === 'failed'
+      ? `[CodeMark] 修复失败: ${result.error || '未知错误'}`
+      : `[CodeMark] 修复成功: ${result.summary}`
+    console.log(msg)
+    // Show toast notification
+    const toast = document.createElement('div')
+    toast.style.cssText = `
+      position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;
+      color:white;font-size:13px;z-index:9999999;font-family:system-ui,sans-serif;
+      box-shadow:0 4px 12px rgba(0,0,0,0.2);max-width:400px;
+      background:${result.status === 'failed' ? '#E74C3C' : '#2ECC71'};
+    `
+    toast.textContent = msg
+    document.body.appendChild(toast)
+    setTimeout(() => toast.remove(), 5000)
   })
 
   // Handle user selecting an element

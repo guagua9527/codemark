@@ -65,6 +65,10 @@ ${sourceContent}
 
     onProgress('AI 生成中...')
 
+    if (!process.env.DEEPSEEK_API_KEY) {
+      throw new Error('DEEPSEEK_API_KEY 未设置，请配置环境变量后重试')
+    }
+
     const response = await this.client.chat.completions.create({
       model: this.model,
       messages: [

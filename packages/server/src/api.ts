@@ -102,10 +102,12 @@ export function createAPI(
 
       broadcast('task:result', { taskId: task.id, status: 'applied', summary: result.summary })
       res.json({ task: { id: task.id, diff: result.diff, summary: result.summary } })
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error(`[CodeMark] Fix task ${task.id} failed:`, message)
       store.updateTaskState(task.id, 'failed')
-      broadcast('task:result', { taskId: task.id, status: 'failed', error: err.message })
-      res.status(500).json({ error: err.message })
+      broadcast('task:result', { taskId: task.id, status: 'failed', error: message })
+      res.status(500).json({ error: message })
     }
   })
 

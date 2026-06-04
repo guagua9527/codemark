@@ -5,7 +5,7 @@ import fs from 'fs'
 export interface CodeMarkPluginOptions {
   serverPort?: number
   /** Source root directory for component filtering. Default: 'src/' */
-  sourceRoot?: string
+  sourceRoot?: string | string[]
 }
 
 function discoverProviders(): string[] {
@@ -55,11 +55,14 @@ export function codemark(options: CodeMarkPluginOptions = {}): Plugin {
       if (id === '\0/@codemark/client') {
         const providers = discoverProviders()
         const sourceRoot = options.sourceRoot || 'src/'
+        const sourceRootCode = Array.isArray(sourceRoot)
+          ? `[${sourceRoot.map(r => `'${r}'`).join(', ')}]`
+          : `'${sourceRoot}'`
         const imports = [`import { initCodeMark } from '@codemark/ui';`]
         for (const pkg of providers) {
           imports.push(`import '${pkg}';`)
         }
-        imports.push(`initCodeMark({ serverPort: ${port}, sourceRoot: '${sourceRoot}' });`)
+        imports.push(`initCodeMark({ serverPort: ${port}, sourceRoot: ${sourceRootCode} });`)
         return imports.join('\n')
       }
     },

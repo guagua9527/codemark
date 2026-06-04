@@ -22,7 +22,7 @@ export interface CodeMarkOptions {
   serverPort?: number
   metaProvider?: ComponentMetaProvider
   /** Source root directory for component filtering. Default: 'src/' */
-  sourceRoot?: string
+  sourceRoot?: string | string[]
 }
 
 const isCustomElement = (el: Element): boolean =>

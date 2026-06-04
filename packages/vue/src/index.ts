@@ -48,7 +48,7 @@ export const getVueComponentMeta = (element: Element): {
 export const createVueMetaProvider = () => {
   const findComponentAtDepth = (element: Element, depth: number) => {
     // Collect distinct enclosing components
-    const components: { file: string; name: string; element: Element }[] = []
+    const components: { file: string; name: string; element: Element; instance: any }[] = []
     let el: Element | null = element
     let lastFile: string | null = null
 
@@ -61,6 +61,7 @@ export const createVueMetaProvider = () => {
             file,
             name: vueComp.type.name || vueComp.type.__name || 'Unknown',
             element: el,
+            instance: vueComp,
           })
           lastFile = file
         }
@@ -93,6 +94,7 @@ export const createVueMetaProvider = () => {
       componentName: comp.name,
       componentRootElement: rootEl,
       targetElement: element,
+      componentInstance: comp.instance,
       depth: idx + 1,
       maxDepth: components.length,
     }

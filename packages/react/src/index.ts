@@ -100,6 +100,7 @@ export const createReactMetaProvider = () => {
       // Walk up fiber tree, skip (depth - 1) function components
       let current = fiber
       let componentName = 'Unknown'
+      let matchedFiber: any = null
       let found = 0
       let maxDepth = 0
       let steps = 0
@@ -109,7 +110,7 @@ export const createReactMetaProvider = () => {
           const name = t.displayName || t.name
           if (name) {
             found++
-            if (found >= depth && componentName === 'Unknown') { componentName = name }
+            if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
           }
         }
         const et = current.elementType
@@ -117,7 +118,7 @@ export const createReactMetaProvider = () => {
           const name = et.displayName || et.name
           if (name) {
             found++
-            if (found >= depth && componentName === 'Unknown') { componentName = name }
+            if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
           }
         }
         current = current.return
@@ -134,6 +135,7 @@ export const createReactMetaProvider = () => {
         componentName,
         componentRootElement: findReactComponentRoot(element),
         targetElement: element,
+        componentInstance: matchedFiber,
         depth,
         maxDepth,
       }

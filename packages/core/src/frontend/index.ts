@@ -5,6 +5,8 @@ export interface ComponentMeta {
   componentName: string
   componentRootElement: Element | null
   targetElement: Element | null
+  /** Framework-specific component instance (Vue component instance, React fiber node, etc.) */
+  componentInstance?: any
   depth?: number
   maxDepth?: number
 }

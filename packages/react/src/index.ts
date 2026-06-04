@@ -112,10 +112,11 @@ export const createReactMetaProvider = () => {
 
       if (found < depth || !matchedFiber?.type) return null
 
+      const src = matchedFiber._debugSource || matchedFiber._debugOwner?._debugSource
       return {
-        filePath: fiber._debugSource.fileName,
-        line: fiber._debugSource.lineNumber,
-        column: fiber._debugSource.columnNumber,
+        filePath: src?.fileName || '',
+        line: src?.lineNumber || 0,
+        column: src?.columnNumber || 0,
         componentName,
         componentRootElement: findReactComponentRoot(matchedFiber),
         targetElement: element,

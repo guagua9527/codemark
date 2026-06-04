@@ -50,10 +50,20 @@ export const getSourceFilter = () => ({ include: _includePatterns, exclude: _exc
 /** Check if a file path matches the source filter */
 export const isSourceMatch = (filePath: string): boolean => {
   if (!filePath) return false
-  const normalized = filePath.replace(/^\//, '').replace(/^\.\//, '')
-  if (_excludePatterns.some(p => p.test(normalized))) return false
+  // Try matching from common project roots to handle absolute paths
+  // e.g. /home/user/project/src/App.tsx -> try matching src/App.tsx
+  const candidates = [filePath]
+  const srcIdx = filePath.lastIndexOf('/src/')
+  if (srcIdx !== -1) candidates.push(filePath.slice(srcIdx + 1))
+  const pkgIdx = filePath.lastIndexOf('/packages/')
+  if (pkgIdx !== -1) candidates.push(filePath.slice(pkgIdx + 1))
+
+  const matchesAny = (patterns: RegExp[]) =>
+    candidates.some(c => patterns.some(p => p.test(c)))
+
+  if (matchesAny(_excludePatterns)) return false
   if (_includePatterns.length === 0) return true
-  return _includePatterns.some(p => p.test(normalized))
+  return matchesAny(_includePatterns)
 }
 
 export const generateSelector = (element: Element): string => {

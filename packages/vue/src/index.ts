@@ -89,7 +89,7 @@ export const createVueMetaProvider = () => {
 
     return {
       filePath: comp.file,
-      line: 0,
+      line: parseInt(rootEl.getAttribute('data-codemark-line') || '0'),
       column: 0,
       componentName: comp.name,
       componentRootElement: rootEl,
@@ -107,6 +107,7 @@ export const createVueMetaProvider = () => {
 }
 
 export { setupErrorHandler, createErrorBoundary } from './error-handler.js'
+export { codemarkVueSourcePlugin } from './vite-plugin.js'
 
 // Self-register as meta provider
 registerMetaProvider('@codemark/vue', createVueMetaProvider())

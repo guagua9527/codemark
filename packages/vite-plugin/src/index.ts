@@ -4,8 +4,10 @@ import fs from 'fs'
 
 export interface CodeMarkPluginOptions {
   serverPort?: number
-  /** Source root directory for component filtering. Default: 'src/' */
-  sourceRoot?: string | string[]
+  /** Glob patterns to include. Default: ['src/**'] */
+  includeSource?: string | string[]
+  /** Glob patterns to exclude. Default: ['node_modules/**'] */
+  excludeSource?: string | string[]
 }
 
 function discoverProviders(): string[] {
@@ -54,15 +56,15 @@ export function codemark(options: CodeMarkPluginOptions = {}): Plugin {
     load(id) {
       if (id === '\0/@codemark/client') {
         const providers = discoverProviders()
-        const sourceRoot = options.sourceRoot || 'src/'
-        const sourceRootCode = Array.isArray(sourceRoot)
-          ? `[${sourceRoot.map(r => `'${r}'`).join(', ')}]`
-          : `'${sourceRoot}'`
+        const toCode = (v: string | string[] | undefined, fallback: string) =>
+          v === undefined ? `'${fallback}'`
+          : Array.isArray(v) ? `[${v.map(r => `'${r}'`).join(', ')}]`
+          : `'${v}'`
         const imports = [`import { initCodeMark } from '@codemark/ui';`]
         for (const pkg of providers) {
           imports.push(`import '${pkg}';`)
         }
-        imports.push(`initCodeMark({ serverPort: ${port}, sourceRoot: ${sourceRootCode} });`)
+        imports.push(`initCodeMark({ serverPort: ${port}, includeSource: ${toCode(options.includeSource, 'src/**')}, excludeSource: ${toCode(options.excludeSource, 'node_modules/**')} });`)
         return imports.join('\n')
       }
     },

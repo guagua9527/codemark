@@ -1,5 +1,5 @@
 import type { App } from 'vue'
-import { registerMetaProvider, isInSourceRoot } from '@codemark/core/frontend'
+import { registerMetaProvider, isSourceMatch } from '@codemark/core/frontend'
 import { setupErrorHandler } from './error-handler.js'
 
 export interface VueAdapterOptions {
@@ -56,7 +56,7 @@ export const createVueMetaProvider = () => {
       const vueComp = (el as any).__vueParentComponent
       if (vueComp?.type?.__file) {
         const file = vueComp.type.__file
-        if (file !== lastFile && isInSourceRoot(file)) {
+        if (file !== lastFile && isSourceMatch(file)) {
           components.push({
             file,
             name: vueComp.type.name || vueComp.type.__name || 'Unknown',

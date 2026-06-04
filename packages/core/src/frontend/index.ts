@@ -25,20 +25,33 @@ export const registerMetaProvider = (name: string, provider: ComponentMetaProvid
 
 export const getRegisteredProviders = () => providers
 
-let _sourceRoots: string[] = ['src/']
-
-export const setSourceRoot = (root: string | string[]) => {
-  const roots = Array.isArray(root) ? root : [root]
-  _sourceRoots = roots.map(r => r.endsWith('/') ? r : r + '/')
+const globToRegex = (pattern: string): RegExp => {
+  const escaped = pattern.replace(/[-[\]{}()+?.\\^$|]/g, c => c === '*' ? '' : `\\${c}`)
+  const regexStr = escaped
+    .replace(/\*\*\/?/g, '(.+/)?')
+    .replace(/\*/g, '[^/]*')
+  return new RegExp(`^${regexStr}$`)
 }
 
-export const getSourceRoot = () => _sourceRoots
+let _includePatterns: RegExp[] = []
+let _excludePatterns: RegExp[] = []
 
-/** Check if a file path is within the configured source root */
-export const isInSourceRoot = (filePath: string): boolean => {
+export const setSourceFilter = (options: { includeSource?: string | string[]; excludeSource?: string | string[] }) => {
+  const includes = options.includeSource ?? ['src/**']
+  const excludes = options.excludeSource ?? ['node_modules/**']
+  _includePatterns = (Array.isArray(includes) ? includes : [includes]).map(globToRegex)
+  _excludePatterns = (Array.isArray(excludes) ? excludes : [excludes]).map(globToRegex)
+}
+
+export const getSourceFilter = () => ({ include: _includePatterns, exclude: _excludePatterns })
+
+/** Check if a file path matches the source filter */
+export const isSourceMatch = (filePath: string): boolean => {
   if (!filePath) return false
-  const normalized = filePath.replace(/^\//, '')
-  return _sourceRoots.some(r => normalized.startsWith(r) || normalized.startsWith('./' + r))
+  const normalized = filePath.replace(/^\//, '').replace(/^\.\//, '')
+  if (_excludePatterns.some(p => p.test(normalized))) return false
+  if (_includePatterns.length === 0) return true
+  return _includePatterns.some(p => p.test(normalized))
 }
 
 export const generateSelector = (element: Element): string => {

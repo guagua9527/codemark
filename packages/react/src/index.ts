@@ -1,4 +1,4 @@
-import { registerMetaProvider, isInSourceRoot } from '@codemark/core/frontend'
+import { registerMetaProvider, isSourceMatch } from '@codemark/core/frontend'
 
 export { CodeMarkErrorBoundary } from './error-boundary.js'
 export type { CodeMarkErrorBoundaryProps } from './error-boundary.js'
@@ -99,7 +99,7 @@ export const createReactMetaProvider = () => {
           if (name && !name.startsWith('CodeMark')) {
             // Check source root: component must have source in user code
             const src = current._debugSource?.fileName || current._debugOwner?._debugSource?.fileName
-            if (src && !isInSourceRoot(src)) continue
+            if (src && !isSourceMatch(src)) continue
             found++
             if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
           }

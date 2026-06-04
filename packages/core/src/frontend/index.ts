@@ -7,6 +7,8 @@ export interface ComponentMeta {
   targetElement: Element | null
   /** Framework-specific component instance (Vue component instance, React fiber node, etc.) */
   componentInstance?: any
+  /** Identifier for the instance type, e.g. 'vue', 'react', 'html' */
+  instanceType?: string
   depth?: number
   maxDepth?: number
 }

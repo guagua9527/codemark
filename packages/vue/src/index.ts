@@ -95,6 +95,7 @@ export const createVueMetaProvider = () => {
       componentRootElement: rootEl,
       targetElement: element,
       componentInstance: comp.instance,
+      instanceType: 'vue',
       depth: idx + 1,
       maxDepth: components.length,
     }

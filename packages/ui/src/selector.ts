@@ -21,7 +21,7 @@ export class ElementSelector {
     const meta = this.metaProvider.getComponentMeta(target, this.depth)
     if (!meta || meta.componentName === 'Unknown') {
       this.removeHighlight()
-      ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, { componentName: '(No component)', filePath: '', line: 0, column: 0, componentRootElement: null, targetElement: null })
+      ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, { componentName: '(No component)', filePath: '', line: 0, column: 0, componentRootElement: null, targetElement: null, instanceType: 'html' })
       this.lastRootElement = null
       return
     }

@@ -136,6 +136,7 @@ export const createReactMetaProvider = () => {
         componentRootElement: findReactComponentRoot(element),
         targetElement: element,
         componentInstance: matchedFiber,
+        instanceType: 'react',
         depth,
         maxDepth,
       }

@@ -1,8 +1,5 @@
 import { generateSelector, type ComponentMeta, type ComponentMetaProvider } from '@codemark/core/frontend'
 
-const isCodeMarkElement = (el: Element): boolean =>
-  el.tagName.startsWith('CODEMARK-') || el.id.startsWith('__codemark_')
-
 export class ElementSelector {
   private highlightEl: HTMLDivElement | null = null
   private active = false
@@ -18,7 +15,7 @@ export class ElementSelector {
   private onMouseOver = (e: MouseEvent) => {
     if (!this.active) return
     const target = e.target as Element
-    if (isCodeMarkElement(target)) return
+    if (target.closest('codemark-overlay')) return
     this.lastX = e.clientX
     this.lastY = e.clientY
     const meta = this.metaProvider.getComponentMeta(target, this.depth)
@@ -39,7 +36,7 @@ export class ElementSelector {
   private onWheel = (e: WheelEvent) => {
     if (!this.active) return
     const target = document.elementFromPoint(this.lastX, this.lastY)
-    if (!target || isCodeMarkElement(target)) return
+    if (!target || target.closest('codemark-overlay')) return
     e.preventDefault()
     const newDepth = e.deltaY < 0 ? this.depth + 1 : this.depth - 1
     if (newDepth < 1) return
@@ -87,7 +84,7 @@ export class ElementSelector {
     if (!this.active) return
     const target = e.target as Element
     if (target.closest('codemark-overlay')) return
-    if (isCodeMarkElement(target)) return
+    if (target.closest('#__codemark_input__, #__codemark_panel__')) return
     e.preventDefault()
     e.stopPropagation()
     const meta = this.metaProvider.getComponentMeta(target)

@@ -48,20 +48,24 @@ export const getReactComponentMeta = (element: Element): {
 }
 
 /**
- * Find the root DOM element of the React component identified by componentFn.
+ * Find the root DOM element of a React component by walking down the fiber tree.
+ * The first HostComponent (DOM element) in the component's subtree is the root.
  */
-const findReactComponentRoot = (element: Element, componentFn: Function): Element | null => {
-  let el: Element | null = element
-  while (el) {
-    const parent: Element | null = el.parentElement
-    if (!parent) break
-    const parentKey = Object.keys(parent).find(k => k.startsWith('__reactFiber'))
-    if (!parentKey) break
-    const parentFiber = (parent as any)[parentKey]
-    if (!parentFiber || parentFiber.type !== componentFn) break
-    el = parent
+const findReactComponentRoot = (fiber: any): Element | null => {
+  let current = fiber.child
+  while (current) {
+    if (current.stateNode instanceof Element) return current.stateNode
+    if (current.child) { current = current.child; continue }
+    // No child, try sibling
+    let sibling = current.sibling
+    while (!sibling && current.return) {
+      if (current.return === fiber) return null
+      current = current.return
+      sibling = current.sibling
+    }
+    current = sibling
   }
-  return el
+  return null
 }
 
 /**
@@ -87,17 +91,12 @@ export const createReactMetaProvider = () => {
       let steps = 0
       while (current && steps < 50) {
         const t = current.type
-        if (typeof t === 'function') {
-          const name = t.displayName || t.name
-          if (name) {
-            found++
-            if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
-          }
-        }
         const et = current.elementType
-        if (typeof et === 'function') {
-          const name = et.displayName || et.name
-          if (name) {
+        // Use elementType if available (original function), fallback to type
+        const fn = (typeof et === 'function' && et) || (typeof t === 'function' && t) || null
+        if (fn) {
+          const name = fn.displayName || fn.name
+          if (name && !name.startsWith('CodeMark')) {
             found++
             if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
           }
@@ -114,7 +113,7 @@ export const createReactMetaProvider = () => {
         line: fiber._debugSource.lineNumber,
         column: fiber._debugSource.columnNumber,
         componentName,
-        componentRootElement: findReactComponentRoot(element, matchedFiber.type),
+        componentRootElement: findReactComponentRoot(matchedFiber),
         targetElement: element,
         componentInstance: matchedFiber,
         instanceType: 'react',

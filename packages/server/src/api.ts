@@ -49,6 +49,20 @@ export function createAPI(
     res.json({ routes, adapterCount: adapterRegistry.getAdapterCount() })
   })
 
+  // --- Errors (from backend adapters) ---
+
+  app.post('/api/errors', (req, res) => {
+    const error = req.body
+    broadcast('backend:error', { error })
+    res.json({ success: true })
+  })
+
+  // --- Logs (for querying) ---
+
+  app.get('/api/logs', (_req, res) => {
+    res.json({ logs: [] })
+  })
+
   // --- Fix endpoint ---
 
   app.post('/api/fix', async (req, res) => {

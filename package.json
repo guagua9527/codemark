@@ -2,11 +2,10 @@
   "name": "codemark",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"PROJECT_ROOT=./examples/vue-app pnpm --filter @codemark/server dev\" \"pnpm --filter vue-app dev\"",
-    "dev:server": "pnpm --filter @codemark/server dev",
-    "dev:app": "pnpm --filter vue-app dev",
-    "build:frontend": "pnpm --filter @codemark/frontend build",
-    "build:plugin": "pnpm --filter @codemark/vite-plugin build"
+    "demo:vue3": "concurrently -n server,app -c blue,green \"PROJECT_ROOT=./examples/vue-app pnpm --filter @codemark/server dev\" \"pnpm --filter vue-app dev\"",
+    "demo:server": "PROJECT_ROOT=./examples/vue-app pnpm --filter @codemark/server dev",
+    "dev": "pnpm -r build && pnpm demo:vue3",
+    "build": "pnpm --filter @codemark/protocol build && pnpm --filter @codemark/server build && pnpm --filter @codemark/ui build && pnpm --filter @codemark/vue build && pnpm --filter @codemark/vite-plugin build && pnpm --filter @codemark/express build"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

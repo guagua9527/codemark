@@ -3,11 +3,7 @@
   "compilerOptions": {
     "jsx": "preserve",
     "jsxImportSource": "vue",
-    "outDir": "dist",
-    "paths": {
-      "@codemark/frontend": ["../../packages/frontend/src"],
-      "@codemark/vite-plugin": ["../../packages/vite-plugin/src"]
-    }
+    "outDir": "dist"
   },
   "include": ["src", "env.d.ts"]
 }

@@ -140,49 +140,69 @@ export const initCodeMark = (options: CodeMarkOptions = {}) => {
 
 // --- Marker management ---
 
-const markers = new Map<string, HTMLDivElement>()
-const annotationStore = new Map<string, Annotation>()
+const selectorAnnotations = new Map<string, Annotation[]>()
+const selectorMarkers = new Map<string, HTMLDivElement>()
 
 const addMarker = (annotation: Annotation) => {
   const target = document.querySelector(annotation.selector)
   if (!target) return
 
+  const existing = selectorAnnotations.get(annotation.selector)
+  if (existing) {
+    existing.push(annotation)
+    refreshMarker(annotation.selector)
+    return
+  }
+
+  selectorAnnotations.set(annotation.selector, [annotation])
+
   const marker = document.createElement('div')
-  marker.id = `__codemark_marker_${annotation.id}__`
-  marker.textContent = '💬'
-  marker.title = annotation.content
+  marker.id = `__codemark_marker__`
   marker.style.cssText = `
-    position: absolute; width: 20px; height: 20px; background: #4A90D9;
-    border-radius: 50%; cursor: pointer; display: flex; align-items: center;
+    position: absolute; min-width: 20px; height: 20px; background: #4A90D9;
+    border-radius: 10px; cursor: pointer; display: flex; align-items: center;
     justify-content: center; color: white; font-size: 11px; z-index: 999999;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2); padding: 0 5px;
   `
   marker.addEventListener('click', (e) => {
     e.stopPropagation()
-    showPanel(annotation, marker)
+    showPanel(annotation.selector, marker)
   })
 
   document.body.appendChild(marker)
-  markers.set(annotation.id, marker)
-  annotationStore.set(annotation.id, annotation)
-  updateMarkerPosition(annotation.id)
+  selectorMarkers.set(annotation.selector, marker)
+  refreshMarker(annotation.selector)
 }
 
-const removeMarker = (id: string) => {
-  const marker = markers.get(id)
-  if (marker) {
-    marker.remove()
-    markers.delete(id)
-    annotationStore.delete(id)
+const removeMarker = (annotationId: string) => {
+  for (const [selector, annotations] of selectorAnnotations) {
+    const idx = annotations.findIndex(a => a.id === annotationId)
+    if (idx === -1) continue
+    annotations.splice(idx, 1)
+    if (annotations.length === 0) {
+      selectorMarkers.get(selector)?.remove()
+      selectorMarkers.delete(selector)
+      selectorAnnotations.delete(selector)
+    } else {
+      refreshMarker(selector)
+    }
+    return
   }
 }
 
-const updateMarkerPosition = (id: string) => {
-  const marker = markers.get(id)
+const refreshMarker = (selector: string) => {
+  const annotations = selectorAnnotations.get(selector)
+  const marker = selectorMarkers.get(selector)
+  if (!annotations || !marker) return
+  marker.textContent = annotations.length > 1 ? `💬${annotations.length}` : '💬'
+  marker.title = annotations.map(a => a.content).join('\n')
+  updateMarkerPosition(selector)
+}
+
+const updateMarkerPosition = (selector: string) => {
+  const marker = selectorMarkers.get(selector)
   if (!marker) return
-  const annotation = annotationStore.get(id)
-  if (!annotation) return
-  const target = document.querySelector(annotation.selector)
+  const target = document.querySelector(selector)
   if (!target) { marker.style.display = 'none'; return }
   const rect = target.getBoundingClientRect()
   marker.style.top = `${rect.top + window.scrollY}px`
@@ -230,10 +250,11 @@ const showInput = (rect: DOMRect, selectorStr: string, meta: { sourceFile: strin
   textarea.focus()
 }
 
-const showPanel = (annotation: Annotation, marker: HTMLDivElement) => {
+const showPanel = (selector: string, marker: HTMLDivElement) => {
   const existing = document.getElementById('__codemark_panel__')
   if (existing) existing.remove()
 
+  const annotations = selectorAnnotations.get(selector) || []
   const rect = marker.getBoundingClientRect()
   const panel = document.createElement('div')
   panel.id = '__codemark_panel__'
@@ -241,32 +262,38 @@ const showPanel = (annotation: Annotation, marker: HTMLDivElement) => {
     position: absolute; top: ${rect.top}px; left: ${rect.right + 8}px;
     background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     padding: 12px; width: 300px; z-index: 1000000; font-family: system-ui, sans-serif; font-size: 13px;
+    max-height: 400px; overflow-y: auto;
   `
-  panel.innerHTML = `
-    <div style="margin-bottom:8px;color:#333;">${annotation.content}</div>
-    <div style="color:#888;font-size:11px;margin-bottom:8px;">${annotation.componentName} · ${annotation.sourceFile}:${annotation.sourceLine}</div>
-    <div>
-      <button class="cm-fix" style="padding:4px 12px;background:#4A90D9;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;margin-right:4px;">AI 修改</button>
-      <button class="cm-delete" style="padding:4px 12px;background:#E74C3C;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">删除</button>
+
+  const itemsHtml = annotations.map(a => `
+    <div class="cm-annotation-item" data-id="${a.id}" style="padding:8px 0;border-bottom:1px solid #eee;">
+      <div style="color:#333;margin-bottom:4px;">${a.content}</div>
+      <div style="color:#888;font-size:11px;margin-bottom:6px;">${a.componentName} · ${a.sourceFile}:${a.sourceLine}</div>
+      <div>
+        <button class="cm-fix" style="padding:3px 10px;background:#4A90D9;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;margin-right:4px;">AI 修改</button>
+        <button class="cm-delete" style="padding:3px 10px;background:#E74C3C;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">删除</button>
+      </div>
     </div>
-  `
+  `).join('')
 
-  panel.querySelector('.cm-fix')!.addEventListener('click', (e) => {
-    console.log('[CodeMark] fix clicked', e)
-    const host = window.location.hostname || 'localhost'
-    fetch(`http://${host}:3001/api/fix`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ annotationId: annotation.id }),
-    }).catch(console.error)
-    panel.remove()
-  })
+  panel.innerHTML = itemsHtml
 
-  panel.querySelector('.cm-delete')!.addEventListener('click', (e) => {
-    console.log('[CodeMark] delete clicked', e)
-    wsClient?.send('annotation:delete', { id: annotation.id })
-    removeMarker(annotation.id)
-    panel.remove()
+  panel.querySelectorAll('.cm-annotation-item').forEach(item => {
+    const id = (item as HTMLElement).dataset.id!
+    item.querySelector('.cm-fix')!.addEventListener('click', () => {
+      const host = window.location.hostname || 'localhost'
+      fetch(`http://${host}:3001/api/fix`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ annotationId: id }),
+      }).catch(console.error)
+      panel.remove()
+    })
+    item.querySelector('.cm-delete')!.addEventListener('click', () => {
+      wsClient?.send('annotation:delete', { id })
+      removeMarker(id)
+      panel.remove()
+    })
   })
 
   document.body.appendChild(panel)
@@ -320,5 +347,5 @@ const loadAnnotations = async (port: number) => {
   }
 }
 
-window.addEventListener('scroll', () => { for (const id of markers.keys()) updateMarkerPosition(id) }, { passive: true })
-window.addEventListener('resize', () => { for (const id of markers.keys()) updateMarkerPosition(id) }, { passive: true })
+window.addEventListener('scroll', () => { for (const sel of selectorMarkers.keys()) updateMarkerPosition(sel) }, { passive: true })
+window.addEventListener('resize', () => { for (const sel of selectorMarkers.keys()) updateMarkerPosition(sel) }, { passive: true })

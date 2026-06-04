@@ -33,9 +33,10 @@ const defaultMetaProvider: ComponentMetaProvider = {
         column: 0,
         componentName: element.getAttribute('data-codemark-component') || 'Unknown',
         rootElement: null,
+        targetElement: element,
       }
     }
-    return { filePath: '', line: 0, column: 0, componentName: 'Unknown', rootElement: null }
+    return { filePath: '', line: 0, column: 0, componentName: 'Unknown', rootElement: null, targetElement: element }
   },
 }
 

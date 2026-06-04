@@ -92,6 +92,7 @@ export const createVueMetaProvider = () => {
       column: 0,
       componentName: comp.name,
       rootElement: rootEl,
+      targetElement: element,
       depth: idx + 1,
       maxDepth: components.length,
     }

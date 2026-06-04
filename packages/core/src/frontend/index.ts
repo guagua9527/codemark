@@ -4,6 +4,7 @@ export interface ComponentMeta {
   column: number
   componentName: string
   rootElement: Element | null
+  targetElement: Element | null
   depth?: number
   maxDepth?: number
 }

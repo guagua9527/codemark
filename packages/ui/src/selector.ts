@@ -21,7 +21,7 @@ export class ElementSelector {
     const meta = this.metaProvider.getComponentMeta(target, this.depth)
     if (!meta || meta.componentName === 'Unknown') {
       this.removeHighlight()
-      ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, { componentName: '(No component)', filePath: '', line: 0, column: 0, rootElement: null })
+      ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, { componentName: '(No component)', filePath: '', line: 0, column: 0, rootElement: null, targetElement: null })
       this.lastRootElement = null
       return
     }
@@ -88,6 +88,7 @@ export class ElementSelector {
     if (!this.active) return
     const target = e.target as Element
     if (target.closest('codemark-overlay')) return
+    if (target.closest('#__codemark_input__, #__codemark_panel__')) return
     e.preventDefault()
     e.stopPropagation()
     const meta = this.metaProvider.getComponentMeta(target)
@@ -95,7 +96,6 @@ export class ElementSelector {
     const selectTarget = meta.rootElement || target
     const selector = generateSelector(selectTarget)
     this.onSelectCallback?.(selectTarget, selector, meta)
-    this.deactivate()
   }
 
   private handleEscape = (e: KeyboardEvent) => {

@@ -1,6 +1,7 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { captureError } from './error-handler.js'
+import { DEFAULT_SERVER_PORT } from '@codemark/core/common'
 
 export interface CodeMarkErrorBoundaryProps {
   children: ReactNode
@@ -23,7 +24,7 @@ export class CodeMarkErrorBoundary extends Component<CodeMarkErrorBoundaryProps,
     captureError(error, {
       componentStack: errorInfo.componentStack ?? '',
       digest: errorInfo.digest ?? undefined,
-    }, this.props.serverPort || 3001)
+    }, this.props.serverPort || DEFAULT_SERVER_PORT)
   }
 
   render() {

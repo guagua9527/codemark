@@ -1,5 +1,6 @@
 import type { App } from 'vue'
 import { registerMetaProvider, isSourceMatch } from '@codemark/core/frontend'
+import { DEFAULT_SERVER_PORT, DATA_CODEMARK_LINE } from '@codemark/core/common'
 import { setupErrorHandler } from './error-handler.js'
 
 export interface VueAdapterOptions {
@@ -9,7 +10,7 @@ export interface VueAdapterOptions {
 export const createVueAdapter = (options: VueAdapterOptions = {}) => {
   return {
     install(app: App) {
-      setupErrorHandler(app, options.serverPort || 3001)
+      setupErrorHandler(app, options.serverPort || DEFAULT_SERVER_PORT)
     },
   }
 }
@@ -89,7 +90,7 @@ export const createVueMetaProvider = () => {
 
     return {
       filePath: comp.file,
-      line: parseInt(element.getAttribute('data-codemark-line') || '0'),
+      line: parseInt(element.getAttribute(DATA_CODEMARK_LINE) || '0'),
       column: 0,
       componentName: comp.name,
       componentRootElement: rootEl,

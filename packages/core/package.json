@@ -1,0 +1,36 @@
+{
+  "name": "@codemark/core",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./frontend": {
+      "import": "./dist/frontend/index.js",
+      "types": "./dist/frontend/index.d.ts"
+    },
+    "./backend": {
+      "import": "./dist/backend/index.js",
+      "types": "./dist/backend/index.d.ts"
+    },
+    "./common": {
+      "import": "./dist/common/index.js",
+      "types": "./dist/common/index.d.ts"
+    },
+    "./util": {
+      "import": "./dist/util/index.js",
+      "types": "./dist/util/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

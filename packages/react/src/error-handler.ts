@@ -1,22 +1,5 @@
-import type { ErrorEvent } from '@codemark/protocol'
-
-let errorIdCounter = 0
-
-const nextErrorId = (): string => {
-  return `react-${Date.now()}-${++errorIdCounter}`
-}
-
-const reportError = (serverPort: number, payload: Omit<ErrorEvent, 'id'> & Record<string, unknown>) => {
-  const body: ErrorEvent & Record<string, unknown> = {
-    id: nextErrorId(),
-    ...payload,
-  }
-  fetch(`http://localhost:${serverPort}/api/errors`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  }).catch(() => {})
-}
+import { reportError } from '@codemark/core/frontend'
+import { DEFAULT_SERVER_PORT } from '@codemark/core/common'
 
 export interface CodeMarkErrorInfo {
   componentStack: string
@@ -24,8 +7,7 @@ export interface CodeMarkErrorInfo {
 }
 
 export const captureError = (error: Error, errorInfo: CodeMarkErrorInfo, serverPort: number) => {
-  reportError(serverPort, {
-    source: 'frontend',
+  reportError('react', serverPort || DEFAULT_SERVER_PORT, {
     type: 'react-error',
     message: error.message,
     stack: error.stack || '',

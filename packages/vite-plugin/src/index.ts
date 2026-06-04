@@ -1,13 +1,11 @@
 import type { Plugin } from 'vite'
 import path from 'path'
 import fs from 'fs'
+import { DEFAULT_SERVER_PORT, type CodeMarkBaseOptions } from '@codemark/core/common'
 
-export interface CodeMarkPluginOptions {
-  serverPort?: number
-  /** Glob patterns to include. Default: ['src/**'] */
-  includeSource?: string | string[]
-  /** Glob patterns to exclude. Default: ['node_modules/**'] */
-  excludeSource?: string | string[]
+export interface CodeMarkPluginOptions extends CodeMarkBaseOptions {
+  /** Auto-discover and import @codemark/* meta providers. Default: true */
+  autoDiscoverProviders?: boolean
 }
 
 function discoverProviders(): string[] {
@@ -26,7 +24,7 @@ function discoverProviders(): string[] {
 }
 
 export function codemark(options: CodeMarkPluginOptions = {}): Plugin {
-  const port = options.serverPort || 3001
+  const port = options.serverPort || DEFAULT_SERVER_PORT
 
   return {
     name: 'vite-plugin-codemark',

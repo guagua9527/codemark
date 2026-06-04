@@ -1,6 +1,7 @@
 import type { Plugin } from 'vite'
 import { parse } from '@vue/compiler-sfc'
 import path from 'path'
+import { DATA_CODEMARK_FILE, DATA_CODEMARK_LINE } from '@codemark/core/common'
 
 const findOpenTags = (content: string) => {
   const tags: { pos: number; name: string }[] = []
@@ -41,7 +42,7 @@ export const codemarkVueSourcePlugin = (): Plugin => ({
     for (let i = tags.length - 1; i >= 0; i--) {
       const absPos = startOffset + tags[i].pos
       const line = result.slice(0, absPos).split('\n').length
-      const injection = ` data-codemark-file="${relPath}" data-codemark-line="${line}"`
+      const injection = ` ${DATA_CODEMARK_FILE}="${relPath}" ${DATA_CODEMARK_LINE}="${line}"`
       result = result.slice(0, absPos) + injection + result.slice(absPos)
     }
     console.log(`[CodeMark] Injected source location into ${tags.length} element(s): ${relPath}`)

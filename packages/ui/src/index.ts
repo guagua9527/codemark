@@ -3,6 +3,7 @@ import { CodemarkHoverInfo } from './hover-info.js'
 import { ElementSelector } from './selector.js'
 import { WSClient } from './ws-client.js'
 import { getRegisteredProviders, setSourceFilter, type ComponentMeta, type ComponentMetaProvider } from '@codemark/core/frontend'
+import { DEFAULT_SERVER_PORT, DATA_CODEMARK_FILE, DATA_CODEMARK_LINE, DATA_CODEMARK_COMPONENT, type CodeMarkBaseOptions } from '@codemark/core/common'
 import type { Annotation, AnnotationInputData } from './types.js'
 
 export { registerMetaProvider, generateSelector } from '@codemark/core/frontend'
@@ -17,14 +18,10 @@ let hoverInfo: CodemarkHoverInfo | null = null
 let selector: ElementSelector | null = null
 let wsClient: WSClient | null = null
 let isActive = false
+let serverPort = DEFAULT_SERVER_PORT
 
-export interface CodeMarkOptions {
-  serverPort?: number
+export interface CodeMarkOptions extends CodeMarkBaseOptions {
   metaProvider?: ComponentMetaProvider
-  /** Glob patterns to include. Default: ['src/**'] */
-  includeSource?: string | string[]
-  /** Glob patterns to exclude. Default: ['node_modules/**'] */
-  excludeSource?: string | string[]
 }
 
 const isCustomElement = (el: Element): boolean =>
@@ -32,13 +29,13 @@ const isCustomElement = (el: Element): boolean =>
 
 const defaultMetaProvider: ComponentMetaProvider = {
   getComponentMeta: (element: Element): ComponentMeta | null => {
-    const file = element.getAttribute('data-codemark-file')
+    const file = element.getAttribute(DATA_CODEMARK_FILE)
     if (file) {
       return {
         filePath: file,
-        line: parseInt(element.getAttribute('data-codemark-line') || '0'),
+        line: parseInt(element.getAttribute(DATA_CODEMARK_LINE) || '0'),
         column: 0,
-        componentName: element.getAttribute('data-codemark-component') || 'Unknown',
+        componentName: element.getAttribute(DATA_CODEMARK_COMPONENT) || 'Unknown',
         componentRootElement: null,
         targetElement: element,
         instanceType: 'html',
@@ -82,7 +79,7 @@ const resolveProvider = (): ComponentMetaProvider => {
 }
 
 export const initCodeMark = (options: CodeMarkOptions = {}) => {
-  const port = options.serverPort || 3001
+  serverPort = options.serverPort || DEFAULT_SERVER_PORT
   setSourceFilter({ includeSource: options.includeSource, excludeSource: options.excludeSource })
   const provider = options.metaProvider || resolveProvider()
 
@@ -94,7 +91,7 @@ export const initCodeMark = (options: CodeMarkOptions = {}) => {
   document.body.appendChild(hoverInfo)
 
   selector = new ElementSelector(overlay.getContainer(), hoverInfo, provider)
-  wsClient = new WSClient(port)
+  wsClient = new WSClient(serverPort)
   wsClient.connect()
 
   // Handle annotation events from server
@@ -138,7 +135,7 @@ export const initCodeMark = (options: CodeMarkOptions = {}) => {
   })
 
   createToggleButton()
-  loadAnnotations(port)
+  loadAnnotations()
 
   console.log('[CodeMark] Initialized. Press toggle button or Ctrl+Shift+A to activate.')
 }
@@ -287,7 +284,7 @@ const showPanel = (selector: string, marker: HTMLDivElement) => {
     const id = (item as HTMLElement).dataset.id!
     item.querySelector('.cm-fix')!.addEventListener('click', () => {
       const host = window.location.hostname || 'localhost'
-      fetch(`http://${host}:3001/api/fix`, {
+      fetch(`http://${host}:${serverPort}/api/fix`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ annotationId: id }),
@@ -341,10 +338,10 @@ const toggleSelector = () => {
   }
 }
 
-const loadAnnotations = async (port: number) => {
+const loadAnnotations = async () => {
   try {
     const host = window.location.hostname || 'localhost'
-    const res = await fetch(`http://${host}:${port}/api/annotations`)
+    const res = await fetch(`http://${host}:${serverPort}/api/annotations`)
     const data = await res.json() as { annotations: Annotation[] }
     data.annotations.forEach(a => addMarker(a))
   } catch {

@@ -102,12 +102,6 @@ importers:
         specifier: ^5.5.0
         version: 5.9.3
 
-  packages/frontend:
-    devDependencies:
-      typescript:
-        specifier: ^5.5.0
-        version: 5.9.3
-
   packages/protocol:
     devDependencies:
       typescript:
@@ -188,6 +182,9 @@ importers:
 
   packages/vite-plugin:
     dependencies:
+      '@codemark/core':
+        specifier: workspace:*
+        version: link:../core
       '@codemark/ui':
         specifier: workspace:*
         version: link:../ui
@@ -207,13 +204,13 @@ importers:
       '@codemark/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@vue/compiler-sfc':
+        specifier: ^3.4.0
+        version: 3.5.35
       vite:
         specifier: ^5.0.0 || ^6.0.0
         version: 5.4.21(@types/node@25.9.1)
     devDependencies:
-      '@vue/compiler-sfc':
-        specifier: ^3.4.0
-        version: 3.5.35
       typescript:
         specifier: ^5.5.0
         version: 5.9.3

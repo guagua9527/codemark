@@ -1,3 +1,5 @@
+export { reportError } from './error-reporter.js'
+
 export interface ComponentMeta {
   filePath: string
   line: number

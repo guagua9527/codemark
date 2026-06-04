@@ -48,28 +48,9 @@ export const getReactComponentMeta = (element: Element): {
 }
 
 /**
- * Find the root DOM element of the React component that contains the given element.
+ * Find the root DOM element of the React component identified by componentFn.
  */
-const findReactComponentRoot = (element: Element): Element | null => {
-  const fiberKey = Object.keys(element).find(k => k.startsWith('__reactFiber'))
-  if (!fiberKey) return null
-
-  const fiber = (element as any)[fiberKey]
-  if (!fiber) return null
-
-  // Find the nearest React component (function type) in the fiber tree
-  let current = fiber
-  let componentFn: Function | null = null
-  while (current) {
-    if (typeof current.type === 'function') {
-      componentFn = current.type
-      break
-    }
-    current = current.return
-  }
-  if (!componentFn) return null
-
-  // Walk up the DOM tree to find the root element of this component
+const findReactComponentRoot = (element: Element, componentFn: Function): Element | null => {
   let el: Element | null = element
   while (el) {
     const parent: Element | null = el.parentElement
@@ -126,14 +107,14 @@ export const createReactMetaProvider = () => {
       }
       maxDepth = found
 
-      if (found < depth) return null
+      if (found < depth || !matchedFiber?.type) return null
 
       return {
         filePath: fiber._debugSource.fileName,
         line: fiber._debugSource.lineNumber,
         column: fiber._debugSource.columnNumber,
         componentName,
-        componentRootElement: findReactComponentRoot(element),
+        componentRootElement: findReactComponentRoot(element, matchedFiber.type),
         targetElement: element,
         componentInstance: matchedFiber,
         instanceType: 'react',

@@ -23,6 +23,9 @@ export interface CodeMarkOptions {
   metaProvider?: ComponentMetaProvider
 }
 
+const isCustomElement = (el: Element): boolean =>
+  el.tagName.includes('-') && !!customElements.get(el.tagName.toLowerCase())
+
 const defaultMetaProvider: ComponentMetaProvider = {
   getComponentMeta: (element: Element): ComponentMeta | null => {
     const file = element.getAttribute('data-codemark-file')
@@ -35,6 +38,29 @@ const defaultMetaProvider: ComponentMetaProvider = {
         componentRootElement: null,
         targetElement: element,
         instanceType: 'html',
+      }
+    }
+    // Walk up to find enclosing custom element (including across shadow DOM boundaries)
+    let el: Element | null = element
+    while (el) {
+      if (isCustomElement(el)) {
+        return {
+          filePath: '',
+          line: 0,
+          column: 0,
+          componentName: el.tagName.toLowerCase(),
+          componentRootElement: el,
+          targetElement: element,
+          componentInstance: el,
+          instanceType: 'webcomponent',
+        }
+      }
+      // Cross shadow DOM boundary
+      const root = el.getRootNode()
+      if (root instanceof ShadowRoot) {
+        el = root.host
+      } else {
+        el = el.parentElement
       }
     }
     return { filePath: '', line: 0, column: 0, componentName: 'Unknown', componentRootElement: null, targetElement: element, instanceType: 'html' }

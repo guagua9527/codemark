@@ -80,7 +80,6 @@ export const createReactMetaProvider = () => {
       if (!reactInternal) return null
 
       const fiber = (element as any)[reactInternal]
-      if (!fiber?._debugSource) return null
 
       // Walk up fiber tree, skip (depth - 1) function components
       let current = fiber

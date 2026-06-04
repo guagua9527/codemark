@@ -74,19 +74,12 @@ const findReactComponentRoot = (fiber: any): Element | null => {
 export const createReactMetaProvider = () => {
   return {
     getComponentMeta: (element: Element, depth = 1) => {
-      const allKeys = Object.keys(element)
-      const reactInternal = allKeys.find(
+      const reactInternal = Object.keys(element).find(
         k => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'),
       )
-      if (!reactInternal) {
-        // Log once to see what keys the element has
-        const reactish = allKeys.filter(k => k.startsWith('__react'))
-        console.log('[CodeMark] no fiber on', element.tagName, 'reactish keys:', reactish, 'total keys:', allKeys.length)
-        return null
-      }
+      if (!reactInternal) return null
 
       const fiber = (element as any)[reactInternal]
-      console.log('[CodeMark] found fiber key:', reactInternal, 'on', element.tagName, 'fiber type:', typeof fiber?.type, 'tag:', fiber?.tag)
 
       // Walk up fiber tree, skip (depth - 1) function components
       let current = fiber
@@ -103,9 +96,6 @@ export const createReactMetaProvider = () => {
         const src = current._debugSource?.fileName || current._debugOwner?._debugSource?.fileName
         const isNamed = !!name && !name.startsWith('CodeMark')
         const srcMatch = !src || isSourceMatch(src)
-        if (steps < 15) {
-          console.log(`[CodeMark] walk ${steps}: tag=${current.tag} type=${typeof t === 'string' ? t : typeof t} name=${name || '-'} src=${src || '-'} srcMatch=${srcMatch} isNamed=${isNamed}`)
-        }
         if (fn && isNamed && srcMatch) {
           found++
           if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
@@ -115,7 +105,6 @@ export const createReactMetaProvider = () => {
       }
       maxDepth = found
 
-      console.log(`[CodeMark] walk done: steps=${steps} found=${found} depth=${depth}`)
       if (found < depth || !matchedFiber?.type) return null
 
       const src = matchedFiber._debugSource || matchedFiber._debugOwner?._debugSource

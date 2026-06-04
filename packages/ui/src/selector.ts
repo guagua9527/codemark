@@ -21,11 +21,11 @@ export class ElementSelector {
     const meta = this.metaProvider.getComponentMeta(target, this.depth)
     if (!meta || meta.componentName === 'Unknown') {
       this.removeHighlight()
-      ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, { componentName: '(No component)', filePath: '', line: 0, column: 0, rootElement: null, targetElement: null })
+      ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, { componentName: '(No component)', filePath: '', line: 0, column: 0, componentRootElement: null, targetElement: null })
       this.lastRootElement = null
       return
     }
-    const highlightTarget = meta.rootElement || target
+    const highlightTarget = meta.componentRootElement || target
     this.showHighlight(highlightTarget)
     if (highlightTarget === this.lastRootElement) {
       ;(this.hoverInfo as any).moveTo?.(e.clientX, e.clientY)
@@ -47,7 +47,7 @@ export class ElementSelector {
     const meta = this.metaProvider.getComponentMeta(target, newDepth)
     if (!meta || meta.componentName === 'Unknown') return
     this.depth = newDepth
-    const highlightTarget = meta.rootElement || target
+    const highlightTarget = meta.componentRootElement || target
     this.showHighlight(highlightTarget)
     ;(this.hoverInfo as any).show?.(this.lastX, this.lastY, meta)
     this.lastRootElement = highlightTarget
@@ -93,7 +93,7 @@ export class ElementSelector {
     e.stopPropagation()
     const meta = this.metaProvider.getComponentMeta(target)
     if (!meta) return
-    const selectTarget = meta.rootElement || target
+    const selectTarget = meta.componentRootElement || target
     const selector = generateSelector(selectTarget)
     this.onSelectCallback?.(selectTarget, selector, meta)
   }

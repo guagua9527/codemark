@@ -3,7 +3,7 @@ export interface ComponentMeta {
   line: number
   column: number
   componentName: string
-  rootElement: Element | null
+  componentRootElement: Element | null
   targetElement: Element | null
   depth?: number
   maxDepth?: number

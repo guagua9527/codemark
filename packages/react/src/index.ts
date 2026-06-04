@@ -132,7 +132,7 @@ export const createReactMetaProvider = () => {
         line: fiber._debugSource.lineNumber,
         column: fiber._debugSource.columnNumber,
         componentName,
-        rootElement: findReactComponentRoot(element),
+        componentRootElement: findReactComponentRoot(element),
         targetElement: element,
         depth,
         maxDepth,

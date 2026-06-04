@@ -27,11 +27,7 @@ export class ElementSelector {
     }
     const highlightTarget = meta.componentRootElement || target
     this.showHighlight(highlightTarget)
-    if (highlightTarget === this.lastRootElement) {
-      ;(this.hoverInfo as any).moveTo?.(e.clientX, e.clientY)
-    } else {
-      ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, meta)
-    }
+    ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, meta)
     this.lastRootElement = highlightTarget
   }
 

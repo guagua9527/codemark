@@ -89,7 +89,7 @@ export const createVueMetaProvider = () => {
 
     return {
       filePath: comp.file,
-      line: parseInt(rootEl.getAttribute('data-codemark-line') || '0'),
+      line: parseInt(element.getAttribute('data-codemark-line') || '0'),
       column: 0,
       componentName: comp.name,
       componentRootElement: rootEl,

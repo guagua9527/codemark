@@ -23,7 +23,8 @@
   },
   "dependencies": {
     "@codemark/core": "workspace:*",
-    "@codemark/protocol": "workspace:*"
+    "@codemark/protocol": "workspace:*",
+    "@vue/compiler-sfc": "^3.4.0"
   },
   "peerDependencies": {
     "vue": "^3.0.0",

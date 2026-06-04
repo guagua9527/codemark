@@ -1,4 +1,4 @@
-import type { ComponentMeta } from './types.js'
+import { generateSelector, type ComponentMeta, type ComponentMetaProvider } from '@codemark/core/frontend'
 
 export class ElementSelector {
   private highlightEl: HTMLDivElement | null = null
@@ -6,39 +6,82 @@ export class ElementSelector {
   private onSelectCallback: ((element: Element, selector: string, meta: ComponentMeta) => void) | null = null
   private overlayContainer: HTMLDivElement
   private hoverInfo: HTMLElement
+  private metaProvider: ComponentMetaProvider
+  private lastRootElement: Element | null = null
+  private depth = 1
+  private lastX = 0
+  private lastY = 0
 
-  constructor(overlayContainer: HTMLDivElement, hoverInfo: HTMLElement) {
+  private onMouseOver = (e: MouseEvent) => {
+    if (!this.active) return
+    const target = e.target as Element
+    if (target.closest('codemark-overlay')) return
+    this.lastX = e.clientX
+    this.lastY = e.clientY
+    const meta = this.metaProvider.getComponentMeta(target, this.depth)
+    if (!meta || meta.componentName === 'Unknown') {
+      this.removeHighlight()
+      ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, { componentName: '(No component)', filePath: '', line: 0, column: 0, rootElement: null })
+      this.lastRootElement = null
+      return
+    }
+    const highlightTarget = meta.rootElement || target
+    this.showHighlight(highlightTarget)
+    if (highlightTarget === this.lastRootElement) {
+      ;(this.hoverInfo as any).moveTo?.(e.clientX, e.clientY)
+    } else {
+      ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, meta)
+    }
+    this.lastRootElement = highlightTarget
+  }
+
+  private handleMouseOver = this.onMouseOver
+
+  private onWheel = (e: WheelEvent) => {
+    if (!this.active) return
+    const target = document.elementFromPoint(this.lastX, this.lastY)
+    if (!target || target.closest('codemark-overlay')) return
+    e.preventDefault()
+    const newDepth = e.deltaY < 0 ? this.depth + 1 : this.depth - 1
+    if (newDepth < 1) return
+    const meta = this.metaProvider.getComponentMeta(target, newDepth)
+    if (!meta || meta.componentName === 'Unknown') return
+    this.depth = newDepth
+    const highlightTarget = meta.rootElement || target
+    this.showHighlight(highlightTarget)
+    ;(this.hoverInfo as any).show?.(this.lastX, this.lastY, meta)
+    this.lastRootElement = highlightTarget
+  }
+
+  private handleWheel = this.onWheel
+
+  constructor(overlayContainer: HTMLDivElement, hoverInfo: HTMLElement, metaProvider: ComponentMetaProvider) {
     this.overlayContainer = overlayContainer
     this.hoverInfo = hoverInfo
+    this.metaProvider = metaProvider
   }
 
-  activate() {
+  activate = () => {
     this.active = true
-    document.addEventListener('mouseover', this.handleMouseOver, true)
+    this.depth = 1
+    document.addEventListener('mousemove', this.handleMouseOver, true)
     document.addEventListener('click', this.handleClick, true)
     document.addEventListener('keydown', this.handleEscape, true)
+    document.addEventListener('wheel', this.handleWheel, { passive: false, capture: true })
   }
 
-  deactivate() {
+  deactivate = () => {
     this.active = false
-    document.removeEventListener('mouseover', this.handleMouseOver, true)
+    document.removeEventListener('mousemove', this.handleMouseOver, true)
     document.removeEventListener('click', this.handleClick, true)
     document.removeEventListener('keydown', this.handleEscape, true)
+    document.removeEventListener('wheel', this.handleWheel, { capture: true } as any)
     this.removeHighlight()
     ;(this.hoverInfo as any).hide?.()
   }
 
-  onSelect(cb: (element: Element, selector: string, meta: ComponentMeta) => void) {
+  onSelect = (cb: (element: Element, selector: string, meta: ComponentMeta) => void) => {
     this.onSelectCallback = cb
-  }
-
-  private handleMouseOver = (e: MouseEvent) => {
-    if (!this.active) return
-    const target = e.target as Element
-    if (target.closest('codemark-overlay')) return
-    this.showHighlight(target)
-    const meta = getComponentMeta(target)
-    ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, meta)
   }
 
   private handleClick = (e: MouseEvent) => {
@@ -47,9 +90,11 @@ export class ElementSelector {
     if (target.closest('codemark-overlay')) return
     e.preventDefault()
     e.stopPropagation()
-    const selector = generateSelector(target)
-    const meta = getComponentMeta(target)
-    this.onSelectCallback?.(target, selector, meta)
+    const meta = this.metaProvider.getComponentMeta(target)
+    if (!meta) return
+    const selectTarget = meta.rootElement || target
+    const selector = generateSelector(selectTarget)
+    this.onSelectCallback?.(selectTarget, selector, meta)
     this.deactivate()
   }
 
@@ -57,7 +102,7 @@ export class ElementSelector {
     if (e.key === 'Escape') this.deactivate()
   }
 
-  private showHighlight(element: Element) {
+  private showHighlight = (element: Element) => {
     if (!this.highlightEl) {
       this.highlightEl = document.createElement('div')
       this.highlightEl.className = 'codemark-highlight'
@@ -70,100 +115,8 @@ export class ElementSelector {
     this.highlightEl.style.height = `${rect.height}px`
   }
 
-  private removeHighlight() {
+  private removeHighlight = () => {
     this.highlightEl?.remove()
     this.highlightEl = null
   }
-}
-
-export function generateSelector(element: Element): string {
-  const parts: string[] = []
-  let current: Element | null = element
-
-  while (current && current !== document.body) {
-    let selector = current.tagName.toLowerCase()
-
-    if (current.id) {
-      selector = `#${current.id}`
-      parts.unshift(selector)
-      break
-    }
-
-    const parent = current.parentElement
-    if (parent) {
-      const siblings = Array.from(parent.children).filter(el => el.tagName === current!.tagName)
-      if (siblings.length > 1) {
-        const index = siblings.indexOf(current) + 1
-        selector += `:nth-of-type(${index})`
-      }
-    }
-
-    parts.unshift(selector)
-    current = current.parentElement
-  }
-
-  return parts.join(' > ')
-}
-
-export function getComponentMeta(element: Element): ComponentMeta {
-  // Vue 3
-  let el: Element | null = element
-  while (el) {
-    const vueComp = (el as any).__vueParentComponent
-    if (vueComp?.type?.__file) {
-      return {
-        filePath: vueComp.type.__file,
-        line: 0,
-        column: 0,
-        componentName: vueComp.type.name || vueComp.type.__name || 'Unknown',
-      }
-    }
-    el = el.parentElement
-  }
-
-  // React
-  const reactInternal = Object.keys(element).find(k => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'))
-  if (reactInternal) {
-    const fiber = (element as any)[reactInternal]
-    if (fiber?._debugSource) {
-      // Walk up fiber tree to find the nearest React component (function/class)
-      let current = fiber
-      let componentName = 'Unknown'
-      let depth = 0
-      while (current && depth < 20) {
-        const t = current.type
-        if (typeof t === 'function') {
-          const name = t.displayName || t.name
-          if (name) { componentName = name; break }
-        }
-        // Also check elementType for HOCs/wrapped components
-        const et = current.elementType
-        if (typeof et === 'function') {
-          const name = et.displayName || et.name
-          if (name) { componentName = name; break }
-        }
-        current = current.return
-        depth++
-      }
-      return {
-        filePath: fiber._debugSource.fileName,
-        line: fiber._debugSource.lineNumber,
-        column: fiber._debugSource.columnNumber,
-        componentName,
-      }
-    }
-  }
-
-  // data-attributes fallback
-  const file = element.getAttribute('data-codemark-file')
-  if (file) {
-    return {
-      filePath: file,
-      line: parseInt(element.getAttribute('data-codemark-line') || '0'),
-      column: 0,
-      componentName: element.getAttribute('data-codemark-component') || 'Unknown',
-    }
-  }
-
-  return { filePath: '', line: 0, column: 0, componentName: 'Unknown' }
 }

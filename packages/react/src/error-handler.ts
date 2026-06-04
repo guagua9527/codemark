@@ -2,11 +2,11 @@ import type { ErrorEvent } from '@codemark/protocol'
 
 let errorIdCounter = 0
 
-function nextErrorId(): string {
+const nextErrorId = (): string => {
   return `react-${Date.now()}-${++errorIdCounter}`
 }
 
-function reportError(serverPort: number, payload: Omit<ErrorEvent, 'id'> & Record<string, unknown>) {
+const reportError = (serverPort: number, payload: Omit<ErrorEvent, 'id'> & Record<string, unknown>) => {
   const body: ErrorEvent & Record<string, unknown> = {
     id: nextErrorId(),
     ...payload,
@@ -23,7 +23,7 @@ export interface CodeMarkErrorInfo {
   digest?: string
 }
 
-export function captureError(error: Error, errorInfo: CodeMarkErrorInfo, serverPort: number) {
+export const captureError = (error: Error, errorInfo: CodeMarkErrorInfo, serverPort: number) => {
   reportError(serverPort, {
     source: 'frontend',
     type: 'react-error',

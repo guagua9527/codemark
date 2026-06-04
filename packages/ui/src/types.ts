@@ -1,11 +1,6 @@
 import type { Annotation } from '@codemark/protocol'
 
-export interface ComponentMeta {
-  filePath: string
-  line: number
-  column: number
-  componentName: string
-}
+export type { ComponentMeta, ComponentMetaProvider } from '@codemark/core/frontend'
 
 export interface AnnotationInputData {
   selector: string

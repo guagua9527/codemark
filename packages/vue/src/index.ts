@@ -1,11 +1,12 @@
 import type { App } from 'vue'
+import { registerMetaProvider } from '@codemark/core/frontend'
 import { setupErrorHandler } from './error-handler.js'
 
 export interface VueAdapterOptions {
   serverPort?: number
 }
 
-export function createVueAdapter(options: VueAdapterOptions = {}) {
+export const createVueAdapter = (options: VueAdapterOptions = {}) => {
   return {
     install(app: App) {
       setupErrorHandler(app, options.serverPort || 3001)
@@ -20,11 +21,11 @@ export function createVueAdapter(options: VueAdapterOptions = {}) {
  * Note: `line` is always 0 because Vue does not expose source line info at runtime.
  * The return type is kept as-is to conform to the protocol spec.
  */
-export function getVueComponentMeta(element: Element): {
+export const getVueComponentMeta = (element: Element): {
   filePath: string
   componentName: string
   line: number
-} | null {
+} | null => {
   let el: Element | null = element
   while (el) {
     const vueComp = (el as any).__vueParentComponent
@@ -40,4 +41,68 @@ export function getVueComponentMeta(element: Element): {
   return null
 }
 
+/**
+ * Create a ComponentMetaProvider for Vue 3 projects.
+ * Finds the enclosing component (skips child components) and its root element.
+ */
+export const createVueMetaProvider = () => {
+  const findComponentAtDepth = (element: Element, depth: number) => {
+    // Collect distinct enclosing components
+    const components: { file: string; name: string; element: Element }[] = []
+    let el: Element | null = element
+    let lastFile: string | null = null
+
+    while (el) {
+      const vueComp = (el as any).__vueParentComponent
+      if (vueComp?.type?.__file) {
+        const file = vueComp.type.__file
+        if (file !== lastFile) {
+          components.push({
+            file,
+            name: vueComp.type.name || vueComp.type.__name || 'Unknown',
+            element: el,
+          })
+          lastFile = file
+        }
+      }
+      el = el.parentElement
+    }
+
+    if (components.length === 0) return null
+
+    const idx = Math.min(depth - 1, components.length - 1)
+    const comp = components[idx]
+
+    // Walk to root element of this component
+    let rootEl: Element = comp.element
+    let walkEl: Element | null = rootEl.parentElement
+    while (walkEl) {
+      const vueComp = (walkEl as any).__vueParentComponent
+      if (vueComp?.type?.__file === comp.file) {
+        rootEl = walkEl
+      } else {
+        break
+      }
+      walkEl = walkEl.parentElement
+    }
+
+    return {
+      filePath: comp.file,
+      line: 0,
+      column: 0,
+      componentName: comp.name,
+      rootElement: rootEl,
+      depth: idx + 1,
+      maxDepth: components.length,
+    }
+  }
+
+  return {
+    getComponentMeta: (element: Element, depth = 1) => findComponentAtDepth(element, depth),
+  }
+}
+
 export { setupErrorHandler, createErrorBoundary } from './error-handler.js'
+
+// Self-register as meta provider
+registerMetaProvider('@codemark/vue', createVueMetaProvider())

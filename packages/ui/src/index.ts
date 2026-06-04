@@ -2,12 +2,14 @@ import { CodemarkOverlay } from './overlay.js'
 import { CodemarkHoverInfo } from './hover-info.js'
 import { ElementSelector } from './selector.js'
 import { WSClient } from './ws-client.js'
-import type { Annotation, ComponentMeta, AnnotationInputData } from './types.js'
+import { getRegisteredProviders, type ComponentMeta, type ComponentMetaProvider } from '@codemark/core/frontend'
+import type { Annotation, AnnotationInputData } from './types.js'
 
-export type { Annotation, ComponentMeta, AnnotationInputData } from './types.js'
+export { registerMetaProvider, generateSelector } from '@codemark/core/frontend'
+export type { Annotation, ComponentMeta, AnnotationInputData, ComponentMetaProvider } from './types.js'
 export { CodemarkOverlay } from './overlay.js'
 export { CodemarkHoverInfo } from './hover-info.js'
-export { ElementSelector, generateSelector, getComponentMeta } from './selector.js'
+export { ElementSelector } from './selector.js'
 export { WSClient } from './ws-client.js'
 
 let overlay: CodemarkOverlay | null = null
@@ -18,10 +20,38 @@ let isActive = false
 
 export interface CodeMarkOptions {
   serverPort?: number
+  metaProvider?: ComponentMetaProvider
 }
 
-export function initCodeMark(options: CodeMarkOptions = {}) {
+const defaultMetaProvider: ComponentMetaProvider = {
+  getComponentMeta: (element: Element): ComponentMeta | null => {
+    const file = element.getAttribute('data-codemark-file')
+    if (file) {
+      return {
+        filePath: file,
+        line: parseInt(element.getAttribute('data-codemark-line') || '0'),
+        column: 0,
+        componentName: element.getAttribute('data-codemark-component') || 'Unknown',
+        rootElement: null,
+      }
+    }
+    return { filePath: '', line: 0, column: 0, componentName: 'Unknown', rootElement: null }
+  },
+}
+
+const resolveProvider = (): ComponentMetaProvider => {
+  const providers = getRegisteredProviders()
+  if (providers.length === 0) return defaultMetaProvider
+  if (providers.length === 1) return providers[0].provider
+  console.warn(
+    `[CodeMark] Multiple meta providers detected: ${providers.map(p => p.name).join(', ')}. Falling back to default HTML provider. Please install only one.`,
+  )
+  return defaultMetaProvider
+}
+
+export const initCodeMark = (options: CodeMarkOptions = {}) => {
   const port = options.serverPort || 3001
+  const provider = options.metaProvider || resolveProvider()
 
   // Create Web Components
   overlay = document.createElement('codemark-overlay') as CodemarkOverlay
@@ -30,7 +60,7 @@ export function initCodeMark(options: CodeMarkOptions = {}) {
   hoverInfo = document.createElement('codemark-hover-info') as CodemarkHoverInfo
   document.body.appendChild(hoverInfo)
 
-  selector = new ElementSelector(overlay.getContainer(), hoverInfo)
+  selector = new ElementSelector(overlay.getContainer(), hoverInfo, provider)
   wsClient = new WSClient(port)
   wsClient.connect()
 
@@ -85,7 +115,7 @@ export function initCodeMark(options: CodeMarkOptions = {}) {
 const markers = new Map<string, HTMLDivElement>()
 const annotationStore = new Map<string, Annotation>()
 
-function addMarker(annotation: Annotation) {
+const addMarker = (annotation: Annotation) => {
   const target = document.querySelector(annotation.selector)
   if (!target) return
 
@@ -109,7 +139,7 @@ function addMarker(annotation: Annotation) {
   updateMarkerPosition(annotation.id)
 }
 
-function removeMarker(id: string) {
+const removeMarker = (id: string) => {
   const marker = markers.get(id)
   if (marker) {
     marker.remove()
@@ -118,7 +148,7 @@ function removeMarker(id: string) {
   }
 }
 
-function updateMarkerPosition(id: string) {
+const updateMarkerPosition = (id: string) => {
   const marker = markers.get(id)
   if (!marker) return
   const annotation = annotationStore.get(id)
@@ -130,7 +160,7 @@ function updateMarkerPosition(id: string) {
   marker.style.left = `${rect.right + window.scrollX}px`
 }
 
-function showInput(rect: DOMRect, selectorStr: string, meta: { sourceFile: string; sourceLine: number; componentName: string }) {
+const showInput = (rect: DOMRect, selectorStr: string, meta: { sourceFile: string; sourceLine: number; componentName: string }) => {
   const existing = document.getElementById('__codemark_input__')
   if (existing) existing.remove()
 
@@ -167,7 +197,7 @@ function showInput(rect: DOMRect, selectorStr: string, meta: { sourceFile: strin
   textarea.focus()
 }
 
-function showPanel(annotation: Annotation, marker: HTMLDivElement) {
+const showPanel = (annotation: Annotation, marker: HTMLDivElement) => {
   const existing = document.getElementById('__codemark_panel__')
   if (existing) existing.remove()
 
@@ -207,7 +237,7 @@ function showPanel(annotation: Annotation, marker: HTMLDivElement) {
   document.body.appendChild(panel)
 }
 
-function createToggleButton() {
+const createToggleButton = () => {
   const btn = document.createElement('div')
   btn.id = '__codemark_toggle__'
   btn.textContent = '✏️'
@@ -229,7 +259,7 @@ function createToggleButton() {
   })
 }
 
-function toggleSelector() {
+const toggleSelector = () => {
   if (!selector) return
   if (isActive) {
     selector.deactivate()
@@ -244,7 +274,7 @@ function toggleSelector() {
   }
 }
 
-async function loadAnnotations(port: number) {
+const loadAnnotations = async (port: number) => {
   try {
     const host = window.location.hostname || 'localhost'
     const res = await fetch(`http://${host}:${port}/api/annotations`)

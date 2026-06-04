@@ -18,7 +18,7 @@ export class CodemarkHoverInfo extends HTMLElement {
     this.style.cssText = 'position:fixed;pointer-events:none;z-index:1000000;'
   }
 
-  private injectStyles() {
+  private injectStyles = () => {
     const style = document.createElement('style')
     style.textContent = `
       :host { all: initial; display: none; }
@@ -34,28 +34,36 @@ export class CodemarkHoverInfo extends HTMLElement {
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       }
       #hover-info .component-name { font-weight: 600; color: #4A90D9; }
+      #hover-info .depth-info { color: #888; font-weight: 400; font-size: 11px; }
       #hover-info .source-file { color: #aaa; font-size: 11px; margin-top: 2px; }
     `
     this.root.appendChild(style)
   }
 
-  show(x: number, y: number, meta: ComponentMeta) {
+  show = (x: number, y: number, meta: ComponentMeta) => {
+    const depthInfo = meta.depth && meta.maxDepth && meta.maxDepth > 1
+      ? ` <span class="depth-info">(${meta.depth}/${meta.maxDepth})</span>`
+      : ''
     this.infoEl.innerHTML = `
-      <div class="component-name">${meta.componentName}</div>
+      <div class="component-name">${meta.componentName}${depthInfo}</div>
       ${meta.filePath ? `<div class="source-file">${meta.filePath}:${meta.line}</div>` : ''}
     `
+    this.moveTo(x, y)
+  }
+
+  moveTo = (x: number, y: number) => {
     this.style.left = `${x + 12}px`
     this.style.top = `${y + 12}px`
     this.setAttribute('visible', '')
     this.visible = true
   }
 
-  hide() {
+  hide = () => {
     this.removeAttribute('visible')
     this.visible = false
   }
 
-  isVisible(): boolean {
+  isVisible = (): boolean => {
     return this.visible
   }
 }

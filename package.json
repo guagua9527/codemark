@@ -2,11 +2,11 @@
   "name": "codemark",
   "private": true,
   "scripts": {
-    "demo:vue3": "concurrently -n server,app -c blue,green \"PROJECT_ROOT=./examples/vue-app pnpm --filter @codemark/server dev\" \"pnpm --filter vue-app dev\"",
-    "demo:react": "concurrently -n server,app -c blue,green \"PROJECT_ROOT=./examples/react-app pnpm --filter @codemark/server dev\" \"pnpm --filter react-app dev\"",
-    "demo:server": "PROJECT_ROOT=./examples/vue-app pnpm --filter @codemark/server dev",
-    "dev": "pnpm build && pnpm demo:vue3",
-    "build": "pnpm --filter @codemark/protocol build && pnpm --filter @codemark/server build && pnpm --filter @codemark/ui build && pnpm --filter @codemark/vue build && pnpm --filter @codemark/react build && pnpm --filter @codemark/vite-plugin build && pnpm --filter @codemark/express build"
+    "demo:vue3": "pnpm build && concurrently -n server,app -c blue,green \"PROJECT_ROOT=./examples/vue-app pnpm --filter @codemark/server dev\" \"pnpm --filter vue-app dev\"",
+    "demo:react": "pnpm build && concurrently -n server,app -c blue,green \"PROJECT_ROOT=./examples/react-app pnpm --filter @codemark/server dev\" \"pnpm --filter react-app dev\"",
+    "demo:server": "pnpm build && PROJECT_ROOT=./examples/vue-app pnpm --filter @codemark/server dev",
+    "dev": "pnpm demo:vue3",
+    "build": "pnpm --filter @codemark/protocol build && pnpm --filter @codemark/core build && pnpm --filter @codemark/server build && pnpm --filter @codemark/ui build && pnpm --filter @codemark/vue build && pnpm --filter @codemark/react build && pnpm --filter @codemark/vite-plugin build && pnpm --filter @codemark/express build"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

@@ -15,7 +15,7 @@ export class CodemarkOverlay extends HTMLElement {
     this.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:999999;'
   }
 
-  private injectStyles() {
+  private injectStyles = () => {
     const style = document.createElement('style')
     style.textContent = `
       :host { all: initial; }
@@ -33,11 +33,11 @@ export class CodemarkOverlay extends HTMLElement {
     this.root.appendChild(style)
   }
 
-  getContainer(): HTMLDivElement {
+  getContainer = (): HTMLDivElement => {
     return this.container
   }
 
-  clear() {
+  clear = () => {
     this.container.innerHTML = ''
   }
 }

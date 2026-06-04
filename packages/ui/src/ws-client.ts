@@ -17,7 +17,7 @@ export class WSClient {
     this.url = `ws://${host}:${port}/codemark`
   }
 
-  connect() {
+  connect = () => {
     this.ws = new WebSocket(this.url)
 
     this.ws.onopen = () => {
@@ -44,7 +44,7 @@ export class WSClient {
     }
   }
 
-  private scheduleReconnect() {
+  private scheduleReconnect = () => {
     if (this.reconnectTimer) return
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
@@ -52,12 +52,12 @@ export class WSClient {
     }, 2000)
   }
 
-  on(event: string, handler: EventHandler) {
+  on = (event: string, handler: EventHandler) => {
     if (!this.handlers.has(event)) this.handlers.set(event, [])
     this.handlers.get(event)!.push(handler)
   }
 
-  send(event: string, payload: unknown) {
+  send = (event: string, payload: unknown) => {
     if (this.ws?.readyState !== WebSocket.OPEN) {
       console.warn('[CodeMark] WebSocket not connected, message dropped')
       return
@@ -66,7 +66,7 @@ export class WSClient {
     this.ws.send(JSON.stringify(msg))
   }
 
-  disconnect() {
+  disconnect = () => {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
     this.ws?.close()
   }

@@ -10,11 +10,15 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "codemark": {
+    "metaProvider": true
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
   },
   "dependencies": {
+    "@codemark/core": "workspace:*",
     "@codemark/protocol": "workspace:*"
   },
   "peerDependencies": {

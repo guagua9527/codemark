@@ -70,6 +70,7 @@ const defaultMetaProvider: ComponentMetaProvider = {
 
 const resolveProvider = (): ComponentMetaProvider => {
   const providers = getRegisteredProviders()
+  console.log(`[CodeMark] Registered providers: ${providers.length}`, providers.map(p => p.name))
   if (providers.length === 0) return defaultMetaProvider
   if (providers.length === 1) return providers[0].provider
   console.warn(

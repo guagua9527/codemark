@@ -10,17 +10,28 @@ export interface CodeMarkPluginOptions extends CodeMarkBaseOptions {
 
 function discoverProviders(): string[] {
   const codemarkDir = path.resolve(process.cwd(), 'node_modules/@codemark')
-  if (!fs.existsSync(codemarkDir)) return []
+  if (!fs.existsSync(codemarkDir)) {
+    console.log('[CodeMark] No node_modules/@codemark directory found')
+    return []
+  }
 
-  return fs.readdirSync(codemarkDir).filter(name => {
+  const dirs = fs.readdirSync(codemarkDir)
+  console.log('[CodeMark] Found @codemark packages:', dirs)
+
+  const providers = dirs.filter(name => {
     try {
       const pkgPath = path.resolve(codemarkDir, name, 'package.json')
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
-      return pkg.codemark?.metaProvider === true
+      const isProvider = pkg.codemark?.metaProvider === true
+      console.log(`[CodeMark]   ${name}: metaProvider=${isProvider}`)
+      return isProvider
     } catch {
       return false
     }
   }).map(name => `@codemark/${name}`)
+
+  console.log('[CodeMark] Discovered providers:', providers)
+  return providers
 }
 
 export function codemark(options: CodeMarkPluginOptions = {}): Plugin {

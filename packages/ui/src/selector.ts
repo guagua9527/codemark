@@ -84,7 +84,7 @@ export class ElementSelector {
     if (!this.active) return
     const target = e.target as Element
     if (target.closest('codemark-overlay')) return
-    if (target.closest('#__codemark_input__, #__codemark_panel__')) return
+    if (target.closest('[id^="__codemark_"]')) return
     e.preventDefault()
     e.stopPropagation()
     const meta = this.metaProvider.getComponentMeta(target)

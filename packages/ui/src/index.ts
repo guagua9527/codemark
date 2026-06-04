@@ -148,6 +148,7 @@ const addMarker = (annotation: Annotation) => {
   if (!target) return
 
   const marker = document.createElement('div')
+  marker.id = `__codemark_marker_${annotation.id}__`
   marker.textContent = '💬'
   marker.title = annotation.content
   marker.style.cssText = `
@@ -211,8 +212,12 @@ const showInput = (rect: DOMRect, selectorStr: string, meta: { sourceFile: strin
   `
 
   const textarea = box.querySelector('textarea')!
-  box.querySelector('.cm-cancel')!.addEventListener('click', () => box.remove())
-  box.querySelector('.cm-submit')!.addEventListener('click', () => {
+  box.querySelector('.cm-cancel')!.addEventListener('click', (e) => {
+    console.log('[CodeMark] cancel clicked', e)
+    box.remove()
+  })
+  box.querySelector('.cm-submit')!.addEventListener('click', (e) => {
+    console.log('[CodeMark] submit clicked', e)
     const content = textarea.value.trim()
     if (!content) return
     wsClient?.send('annotation:create', {
@@ -246,7 +251,8 @@ const showPanel = (annotation: Annotation, marker: HTMLDivElement) => {
     </div>
   `
 
-  panel.querySelector('.cm-fix')!.addEventListener('click', () => {
+  panel.querySelector('.cm-fix')!.addEventListener('click', (e) => {
+    console.log('[CodeMark] fix clicked', e)
     const host = window.location.hostname || 'localhost'
     fetch(`http://${host}:3001/api/fix`, {
       method: 'POST',
@@ -256,7 +262,8 @@ const showPanel = (annotation: Annotation, marker: HTMLDivElement) => {
     panel.remove()
   })
 
-  panel.querySelector('.cm-delete')!.addEventListener('click', () => {
+  panel.querySelector('.cm-delete')!.addEventListener('click', (e) => {
+    console.log('[CodeMark] delete clicked', e)
     wsClient?.send('annotation:delete', { id: annotation.id })
     removeMarker(annotation.id)
     panel.remove()

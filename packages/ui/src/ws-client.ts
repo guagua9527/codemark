@@ -13,7 +13,8 @@ export class WSClient {
   private url: string
 
   constructor(port: number) {
-    this.url = `ws://localhost:${port}/codemark`
+    const host = window.location.hostname || 'localhost'
+    this.url = `ws://${host}:${port}/codemark`
   }
 
   connect() {

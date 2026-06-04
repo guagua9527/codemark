@@ -175,7 +175,8 @@ function showPanel(annotation: Annotation, marker: HTMLDivElement) {
   `
 
   panel.querySelector('.cm-fix')!.addEventListener('click', () => {
-    fetch(`http://localhost:3001/api/task`, {
+    const host = window.location.hostname || 'localhost'
+    fetch(`http://${host}:3001/api/fix`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ annotationId: annotation.id }),
@@ -231,7 +232,8 @@ function toggleSelector() {
 
 async function loadAnnotations(port: number) {
   try {
-    const res = await fetch(`http://localhost:${port}/api/annotations`)
+    const host = window.location.hostname || 'localhost'
+    const res = await fetch(`http://${host}:${port}/api/annotations`)
     const data = await res.json() as { annotations: Annotation[] }
     data.annotations.forEach(a => addMarker(a))
   } catch {

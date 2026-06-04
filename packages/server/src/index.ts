@@ -31,8 +31,8 @@ const server = http.createServer(app)
 // Start WebSocket server and get broadcast function
 broadcast = createWSServer(server, store, adapterRegistry)
 
-server.listen(PORT, () => {
-  console.log(`[CodeMark] Server running on http://localhost:${PORT}`)
-  console.log(`[CodeMark] WebSocket on ws://localhost:${PORT}/codemark`)
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[CodeMark] Server running on http://0.0.0.0:${PORT}`)
+  console.log(`[CodeMark] WebSocket on ws://0.0.0.0:${PORT}/codemark`)
   console.log(`[CodeMark] Project root: ${PROJECT_ROOT}`)
 })

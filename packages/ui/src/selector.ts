@@ -93,6 +93,7 @@ export class ElementSelector {
     e.stopPropagation()
     const meta = this.metaProvider.getComponentMeta(target)
     if (!meta) return
+    console.log('[CodeMark] meta:', meta)
     const selectTarget = meta.componentRootElement || target
     const selector = generateSelector(selectTarget)
     this.onSelectCallback?.(selectTarget, selector, meta)

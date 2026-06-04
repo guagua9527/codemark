@@ -74,12 +74,19 @@ const findReactComponentRoot = (fiber: any): Element | null => {
 export const createReactMetaProvider = () => {
   return {
     getComponentMeta: (element: Element, depth = 1) => {
-      const reactInternal = Object.keys(element).find(
+      const allKeys = Object.keys(element)
+      const reactInternal = allKeys.find(
         k => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'),
       )
-      if (!reactInternal) return null
+      if (!reactInternal) {
+        // Log once to see what keys the element has
+        const reactish = allKeys.filter(k => k.startsWith('__react'))
+        console.log('[CodeMark] no fiber on', element.tagName, 'reactish keys:', reactish, 'total keys:', allKeys.length)
+        return null
+      }
 
       const fiber = (element as any)[reactInternal]
+      console.log('[CodeMark] found fiber key:', reactInternal, 'on', element.tagName, 'fiber type:', typeof fiber?.type, 'tag:', fiber?.tag)
 
       // Walk up fiber tree, skip (depth - 1) function components
       let current = fiber

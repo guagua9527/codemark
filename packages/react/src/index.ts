@@ -99,9 +99,10 @@ export const createReactMetaProvider = () => {
           if (name && !name.startsWith('CodeMark')) {
             // Check source root: component must have source in user code
             const src = current._debugSource?.fileName || current._debugOwner?._debugSource?.fileName
-            if (src && !isSourceMatch(src)) continue
-            found++
-            if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
+            if (!src || isSourceMatch(src)) {
+              found++
+              if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
+            }
           }
         }
         current = current.return

@@ -2,7 +2,7 @@ import { CodemarkOverlay } from './overlay.js'
 import { CodemarkHoverInfo } from './hover-info.js'
 import { ElementSelector } from './selector.js'
 import { WSClient } from './ws-client.js'
-import { getRegisteredProviders, type ComponentMeta, type ComponentMetaProvider } from '@codemark/core/frontend'
+import { getRegisteredProviders, setSourceRoot, type ComponentMeta, type ComponentMetaProvider } from '@codemark/core/frontend'
 import type { Annotation, AnnotationInputData } from './types.js'
 
 export { registerMetaProvider, generateSelector } from '@codemark/core/frontend'
@@ -21,6 +21,8 @@ let isActive = false
 export interface CodeMarkOptions {
   serverPort?: number
   metaProvider?: ComponentMetaProvider
+  /** Source root directory for component filtering. Default: 'src/' */
+  sourceRoot?: string
 }
 
 const isCustomElement = (el: Element): boolean =>
@@ -79,6 +81,7 @@ const resolveProvider = (): ComponentMetaProvider => {
 
 export const initCodeMark = (options: CodeMarkOptions = {}) => {
   const port = options.serverPort || 3001
+  if (options.sourceRoot) setSourceRoot(options.sourceRoot)
   const provider = options.metaProvider || resolveProvider()
 
   // Create Web Components

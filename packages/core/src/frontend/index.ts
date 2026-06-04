@@ -25,6 +25,21 @@ export const registerMetaProvider = (name: string, provider: ComponentMetaProvid
 
 export const getRegisteredProviders = () => providers
 
+let _sourceRoot = 'src/'
+
+export const setSourceRoot = (root: string) => {
+  _sourceRoot = root.endsWith('/') ? root : root + '/'
+}
+
+export const getSourceRoot = () => _sourceRoot
+
+/** Check if a file path is within the configured source root */
+export const isInSourceRoot = (filePath: string): boolean => {
+  if (!filePath) return false
+  const normalized = filePath.replace(/^\//, '')
+  return normalized.startsWith(_sourceRoot) || normalized.startsWith('./' + _sourceRoot)
+}
+
 export const generateSelector = (element: Element): string => {
   const parts: string[] = []
   let current: Element | null = element

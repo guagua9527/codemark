@@ -126,11 +126,30 @@ export function getComponentMeta(element: Element): ComponentMeta {
   if (reactInternal) {
     const fiber = (element as any)[reactInternal]
     if (fiber?._debugSource) {
+      // Walk up fiber tree to find the nearest React component (function/class)
+      let current = fiber
+      let componentName = 'Unknown'
+      let depth = 0
+      while (current && depth < 20) {
+        const t = current.type
+        if (typeof t === 'function') {
+          const name = t.displayName || t.name
+          if (name) { componentName = name; break }
+        }
+        // Also check elementType for HOCs/wrapped components
+        const et = current.elementType
+        if (typeof et === 'function') {
+          const name = et.displayName || et.name
+          if (name) { componentName = name; break }
+        }
+        current = current.return
+        depth++
+      }
       return {
         filePath: fiber._debugSource.fileName,
         line: fiber._debugSource.lineNumber,
         column: fiber._debugSource.columnNumber,
-        componentName: fiber.type?.name || fiber.type?.displayName || 'Unknown',
+        componentName,
       }
     }
   }

@@ -11,6 +11,7 @@ export class ElementSelector {
   private depth = 1
   private lastX = 0
   private lastY = 0
+  private _lastMissLogged = false
 
   private onMouseOver = (e: MouseEvent) => {
     if (!this.active) return
@@ -20,11 +21,17 @@ export class ElementSelector {
     this.lastY = e.clientY
     const meta = this.metaProvider.getComponentMeta(target, this.depth)
     if (!meta || meta.componentName === 'Unknown') {
+      // Log once on first miss to avoid spam
+      if (!this._lastMissLogged) {
+        console.log('[CodeMark] hover miss:', target.tagName, 'meta:', meta)
+        this._lastMissLogged = true
+      }
       this.removeHighlight()
       ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, { componentName: '(No component)', filePath: '', line: 0, column: 0, componentRootElement: null, targetElement: null, instanceType: 'html' })
       this.lastRootElement = null
       return
     }
+    this._lastMissLogged = false
     const highlightTarget = meta.componentRootElement || target
     this.showHighlight(highlightTarget)
     ;(this.hoverInfo as any).show?.(e.clientX, e.clientY, meta)
@@ -87,9 +94,10 @@ export class ElementSelector {
     if (target.closest('[id^="__codemark_"]')) return
     e.preventDefault()
     e.stopPropagation()
+    console.log('[CodeMark] click target:', target.tagName, target)
     const meta = this.metaProvider.getComponentMeta(target)
+    console.log('[CodeMark] click meta:', meta)
     if (!meta) return
-    console.log('[CodeMark] meta:', meta)
     const selectTarget = meta.componentRootElement || target
     const selector = generateSelector(selectTarget)
     this.onSelectCallback?.(selectTarget, selector, meta)

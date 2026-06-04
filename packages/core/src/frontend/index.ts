@@ -30,7 +30,7 @@ export const getRegisteredProviders = () => providers
 const globToRegex = (pattern: string): RegExp => {
   const escaped = pattern.replace(/[-[\]{}()+?.\\^$|]/g, c => c === '*' ? '' : `\\${c}`)
   const regexStr = escaped
-    .replace(/\*\*\/?/g, '(.+/)?')
+    .replace(/\*\*\/?/g, '(.+)?')
     .replace(/\*/g, '[^/]*')
   return new RegExp(`^${regexStr}$`)
 }

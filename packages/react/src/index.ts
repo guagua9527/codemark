@@ -77,13 +77,9 @@ export const createReactMetaProvider = () => {
       const reactInternal = Object.keys(element).find(
         k => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'),
       )
-      if (!reactInternal) {
-        console.log('[CodeMark] No react fiber on element:', element.tagName)
-        return null
-      }
+      if (!reactInternal) return null
 
       const fiber = (element as any)[reactInternal]
-      console.log('[CodeMark] getComponentMeta:', element.tagName, 'fiber:', fiber?.type?.name || fiber?.type || typeof fiber?.type, 'depth:', depth)
 
       // Walk up fiber tree, skip (depth - 1) function components
       let current = fiber
@@ -95,27 +91,24 @@ export const createReactMetaProvider = () => {
       while (current && steps < 50) {
         const t = current.type
         const et = current.elementType
-        // Use elementType if available (original function), fallback to type
         const fn = (typeof et === 'function' && et) || (typeof t === 'function' && t) || null
         const name = fn?.displayName || fn?.name
         const src = current._debugSource?.fileName || current._debugOwner?._debugSource?.fileName
         const isNamed = !!name && !name.startsWith('CodeMark')
         const srcMatch = !src || isSourceMatch(src)
-        console.log(`[CodeMark]   step ${steps}: type=${typeof t} name=${name || '(unnamed)'} fn=${fn ? 'yes' : 'no'} src=${src || '(none)'} srcMatch=${srcMatch} isNamed=${isNamed} tag=${current.tag} stateNode=${current.stateNode?.tagName || typeof current.stateNode}`)
-        if (fn) {
-          if (isNamed) {
-            if (srcMatch) {
-              found++
-              if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
-            }
-          }
+        if (steps < 10 || isNamed) {
+          console.log(`[CodeMark] step${steps}: name=${name || '-'} src=${src ? 'yes' : 'no'} srcMatch=${srcMatch} tag=${current.tag}`)
+        }
+        if (fn && isNamed && srcMatch) {
+          found++
+          if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
         }
         current = current.return
         steps++
       }
       maxDepth = found
 
-      console.log(`[CodeMark] result: found=${found} depth=${depth} matched=${matchedFiber?.type?.name || 'none'}`)
+      console.log(`[CodeMark] => found=${found} depth=${depth} matched=${matchedFiber?.type?.name || 'none'}`)
       if (found < depth || !matchedFiber?.type) return null
 
       const src = matchedFiber._debugSource || matchedFiber._debugOwner?._debugSource

@@ -103,6 +103,9 @@ export const createReactMetaProvider = () => {
         const src = current._debugSource?.fileName || current._debugOwner?._debugSource?.fileName
         const isNamed = !!name && !name.startsWith('CodeMark')
         const srcMatch = !src || isSourceMatch(src)
+        if (steps < 15) {
+          console.log(`[CodeMark] walk ${steps}: tag=${current.tag} type=${typeof t === 'string' ? t : typeof t} name=${name || '-'} src=${src || '-'} srcMatch=${srcMatch} isNamed=${isNamed}`)
+        }
         if (fn && isNamed && srcMatch) {
           found++
           if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
@@ -112,6 +115,7 @@ export const createReactMetaProvider = () => {
       }
       maxDepth = found
 
+      console.log(`[CodeMark] walk done: steps=${steps} found=${found} depth=${depth}`)
       if (found < depth || !matchedFiber?.type) return null
 
       const src = matchedFiber._debugSource || matchedFiber._debugOwner?._debugSource

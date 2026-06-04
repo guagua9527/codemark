@@ -32,8 +32,12 @@ export class CodeAgent {
   constructor(projectRoot: string) {
     this.projectRoot = projectRoot
     this.model = process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+    const apiKey = process.env.DEEPSEEK_API_KEY || ''
+    console.log(`[CodeMark] AI Agent initialized with model: ${this.model}`)
+    console.log(`[CodeMark] API Key: ${apiKey ? `${apiKey.substring(0, 10)}...` : '(not set)'}`)
+    console.log(`[CodeMark] Base URL: ${process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'}`)
     this.client = new OpenAI({
-      apiKey: process.env.DEEPSEEK_API_KEY || '',
+      apiKey,
       baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
     })
   }

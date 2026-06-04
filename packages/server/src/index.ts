@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import dotenv from 'dotenv'
 import http from 'http'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -9,11 +9,13 @@ import { CodeAgent } from './ai.js'
 import { AdapterRegistry } from './adapter-registry.js'
 import { ContextBuilder } from './context-builder.js'
 
+// Load .env from project root (two levels up from packages/server/src/)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+
 const PORT = parseInt(process.env.CODEMARK_PORT || '3001')
 
 // Resolve PROJECT_ROOT: relative paths are resolved against the monorepo root
-// (two levels up from packages/server/src/)
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const monorepoRoot = path.resolve(__dirname, '../../..')
 const rawRoot = process.env.PROJECT_ROOT || process.cwd()
 const PROJECT_ROOT = path.isAbsolute(rawRoot) ? rawRoot : path.resolve(monorepoRoot, rawRoot)

@@ -77,9 +77,13 @@ export const createReactMetaProvider = () => {
       const reactInternal = Object.keys(element).find(
         k => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'),
       )
-      if (!reactInternal) return null
+      if (!reactInternal) {
+        console.log('[CodeMark] No react fiber on element:', element.tagName)
+        return null
+      }
 
       const fiber = (element as any)[reactInternal]
+      console.log('[CodeMark] getComponentMeta:', element.tagName, 'fiber:', fiber?.type?.name || fiber?.type || typeof fiber?.type, 'depth:', depth)
 
       // Walk up fiber tree, skip (depth - 1) function components
       let current = fiber
@@ -93,12 +97,14 @@ export const createReactMetaProvider = () => {
         const et = current.elementType
         // Use elementType if available (original function), fallback to type
         const fn = (typeof et === 'function' && et) || (typeof t === 'function' && t) || null
+        const name = fn?.displayName || fn?.name
+        const src = current._debugSource?.fileName || current._debugOwner?._debugSource?.fileName
+        const isNamed = !!name && !name.startsWith('CodeMark')
+        const srcMatch = !src || isSourceMatch(src)
+        console.log(`[CodeMark]   step ${steps}: type=${typeof t} name=${name || '(unnamed)'} fn=${fn ? 'yes' : 'no'} src=${src || '(none)'} srcMatch=${srcMatch} isNamed=${isNamed} tag=${current.tag} stateNode=${current.stateNode?.tagName || typeof current.stateNode}`)
         if (fn) {
-          const name = fn.displayName || fn.name
-          if (name && !name.startsWith('CodeMark')) {
-            // Check source root: component must have source in user code
-            const src = current._debugSource?.fileName || current._debugOwner?._debugSource?.fileName
-            if (!src || isSourceMatch(src)) {
+          if (isNamed) {
+            if (srcMatch) {
               found++
               if (found >= depth && !matchedFiber) { componentName = name; matchedFiber = current }
             }
@@ -109,6 +115,7 @@ export const createReactMetaProvider = () => {
       }
       maxDepth = found
 
+      console.log(`[CodeMark] result: found=${found} depth=${depth} matched=${matchedFiber?.type?.name || 'none'}`)
       if (found < depth || !matchedFiber?.type) return null
 
       const src = matchedFiber._debugSource || matchedFiber._debugOwner?._debugSource
